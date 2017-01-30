@@ -14,17 +14,14 @@ def buildEquation(points, size):
 def buildResult(solved):
     return ' '.join([str(val) for val in solved])
 
-a1,b1 = buildEquation([1.,15.], 1)
-print buildResult(np.linalg.solve(a1, b1))
-
-a2,b2 = buildEquation([1.,8.,15.],2)
-print buildResult(np.linalg.solve(a2, b2))
-
-a3,b3 = buildEquation([1.,4.,10.,15.],3)
-solved = buildResult(np.linalg.solve(a3, b3))
-print solved
-print 'Result: ', solved
+result = ''
+for input in [([1.,15.], 1), ([1.,8.,15.],2), ([1.,4.,10.,15.],3)]:
+    a,b = buildEquation(input[0], input[1])
+    result = buildResult(np.linalg.solve(a, b))
+    print result
+    
+print 'Result: ', result
 
 submissionFile = open('..\Results\submission-2.txt', 'w')
-submissionFile.write(solved)
+submissionFile.write(result)
 submissionFile.close()
