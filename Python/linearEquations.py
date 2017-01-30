@@ -1,7 +1,6 @@
 import numpy as np
 
-def func(x):
-    return np.sin(x/5.) * np.exp(x/10.) + 5. * np.exp(-x/2.)
+def func(x): return np.sin(x/5.) * np.exp(x/10.) + 5. * np.exp(-x/2.)
 
 def buildEquation(points, size):
     matrix = []
