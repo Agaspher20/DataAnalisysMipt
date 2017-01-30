@@ -58,6 +58,8 @@
     <None Include="App.config" />
     <Content Include="packages.config" />
     <None Include="HelloWorld.fsx" />
+    <None Include="LinearEquations.fsx" />
+    <None Include="StringsComparison.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
