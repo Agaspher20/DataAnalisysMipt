@@ -10,7 +10,7 @@ let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission-2.txt"
 
 let func (x:float) = sin(x/5.) * exp(x/10.) + 5. * exp(-x/2.)
     
-let buildEquation func (size:int) (points:List<float>) =
+let buildEquation func ((size:int),(points:List<float>)) =
     let equationMatrix, equationVector =
         points
         |> List.map(fun point ->
@@ -20,12 +20,11 @@ let buildEquation func (size:int) (points:List<float>) =
     (matrix equationMatrix, vector equationVector)
 
 let buildResult = Seq.map (fun r -> r.ToString()) >> String.concat " "
+let solveEquation ((a:Matrix<float>),(b:Vector<float>)) = a.Solve b
 
 let results =
     [|(1, [1.;15.]); (2,[1.;8.;15.]); (3,[1.;4.;10.;15.])|]
-    |> Array.map (fun (size, points) ->
-        let a,b = buildEquation func size points
-        a.Solve b |> buildResult)
+    |> Array.map (buildEquation func >> solveEquation >> buildResult)
 
 results |> Array.iter (printfn "%s")
 
