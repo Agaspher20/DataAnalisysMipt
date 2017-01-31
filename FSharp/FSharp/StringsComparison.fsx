@@ -31,33 +31,32 @@ let allTokens =
 
 let tokensByLines =
     lines
-    |> Seq.map (fun (_,tokens) ->
+    |> Seq.map (fun (line,tokens) ->
         let tokensMap = tokens |> Map.ofSeq
-        allTokens
+        (line,allTokens
         |> Seq.map (fun token ->
             match tokensMap |> Map.tryFind token with
             | None -> 0.
             | Some count -> (float count))
-        |> Seq.toArray)
+        |> Seq.toArray))
     |> Seq.toList
 
-let firstLine = tokensByLines.[0]
+let firstLine = snd tokensByLines.[0]
 let distanceToFirstLine = cosine firstLine
 
 let results =
     tokensByLines.[1..]
-    |> List.mapi (fun index vector -> (index+1, vector |> distanceToFirstLine))
-    |> List.sortBy (fun (_,distance) -> distance)
+    |> List.mapi (fun index (line, vector) -> (index+1, line, vector |> distanceToFirstLine))
+    |> List.sortBy (fun (_,_,distance) -> distance)
     |> List.take 2
-let result = results |> List.map (fun (index,_) -> index.ToString()) |> String.concat " "
+let result = results |> List.map (fun (index,_,_) -> index.ToString()) |> String.concat " "
 
 printfn "Matrix shape: %i %i" (tokensByLines |> List.length) (firstLine |> Array.length)
 printfn "First sentence: \"%s\"\n" (fst lines.[0])
 
 results
-|> List.iter (fun (index, distance) ->
-    printfn "Distance: %f Index: %i" distance index
-    printfn "%s\n" (lines.[index] |> fst))
+|> List.iter (fun (index, line, distance) ->
+    printfn "Distance: %f Index: %i\n%s\n" distance index line)
 
 printfn "Result: %s" result
 
