@@ -29,5 +29,5 @@ let results =
 results |> Array.iter (printfn "%s")
 
 let resultWriter = File.CreateText resultPath
-results |> Array.tail |> Array.iter resultWriter.Write
+results |> Array.last |> resultWriter.Write
 resultWriter.Close()
