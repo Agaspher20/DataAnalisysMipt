@@ -44,9 +44,9 @@ let readLinesCondLazy (predicate:int->bool) path =
         use fileObject = File.OpenText(path)
         let mutable i = 0
         while not fileObject.EndOfStream do
-            if predicate i
-            then yield fileObject.ReadLine()
-            else fileObject.ReadLine() |> ignore
+            match predicate i with
+            | true -> yield fileObject.ReadLine()
+            | _ -> fileObject.ReadLine() |> ignore
             i <- i+1
                 
         fileObject.Close()
@@ -55,8 +55,8 @@ let readLinesCondLazy (predicate:int->bool) path =
 filePath |> readLinesLazy |> Seq.iter (printfn "%s")
 
 filePath |> readLinesLazy |> Seq.iteri (fun index line ->
-    match line with
-    | _ when index % 2 = 0 -> ()
-    | _ -> printfn "%s" line)
+    if index % 2 = 0
+    then ()
+    else printfn "%s" line)
 
 filePath |> readLinesCondLazy (fun index -> index % 2 = 0) |> Seq.iter (printfn "%s")
