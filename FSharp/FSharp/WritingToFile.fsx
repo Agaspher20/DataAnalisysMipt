@@ -19,3 +19,12 @@ fileObj.Close()
 let fileObj = File.CreateText(resultPath)
 [1..10] |> List.iter fileObj.WriteLine
 fileObj.Close()
+
+let writeInFile path data =
+    use file = File.CreateText(path)
+    data
+    |> List.map (fun item -> item.ToString())
+    |> List.iter file.WriteLine
+    file.Close()
+
+writeInFile resultPath ["one";"two";"three"]

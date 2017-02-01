@@ -9,7 +9,7 @@ let allLines = File.ReadAllLines(filePath)
 allLines |> Array.iter (printfn "%s")
 
 let allLinesGenerated = [
-    let readStream = File.OpenText(filePath)
+    use readStream = File.OpenText(filePath)
     while not readStream.EndOfStream do
         yield readStream.ReadLine()
     readStream.Close()
@@ -19,7 +19,7 @@ allLinesGenerated |> List.iter (printfn "%s")
 
 
 let lines = seq {
-    let fileObject = File.OpenText(filePath)
+    use fileObject = File.OpenText(filePath)
     let mutable i = 0
     while not fileObject.EndOfStream do
         printfn "%s %i" "Reading line" i
@@ -33,7 +33,7 @@ lines |> Seq.iter (printfn "%s")
 
 let readLinesLazy path =
     seq {
-        let fileObject = File.OpenText(path)
+        use fileObject = File.OpenText(path)
         while not fileObject.EndOfStream do
             yield fileObject.ReadLine()
         fileObject.Close()
@@ -41,7 +41,7 @@ let readLinesLazy path =
 
 let readLinesCondLazy (predicate:int->bool) path =
     seq {
-        let fileObject = File.OpenText(path)
+        use fileObject = File.OpenText(path)
         let mutable i = 0
         while not fileObject.EndOfStream do
             if predicate i
