@@ -1,0 +1,6 @@
+LibOptimization https://www.nuget.org/packages/LibOptimization/ - optimisation methods
+MathNet.Numerics - Math methods
+Accord.Net - data analisys methods
+
+http://fsharp.org/guides/math-and-statistics/ - F# libraries
+https://msdn.microsoft.com/en-us/library/hh304368(v=vs.100).aspx - F# libraries and book
