@@ -1,6 +1,12 @@
 LibOptimization https://www.nuget.org/packages/LibOptimization/ - optimisation methods
 MathNet.Numerics - Math methods
+DotNetNumerics - http://www.dotnumerics.com/NumericalLibraries/Optimization/Default.aspx
 Accord.Net - data analisys methods
+DiffSharp - http://diffsharp.github.io/DiffSharp/
 
 http://fsharp.org/guides/math-and-statistics/ - F# libraries
 https://msdn.microsoft.com/en-us/library/hh304368(v=vs.100).aspx - F# libraries and book
+
+https://sergeytihon.wordpress.com/2012/12/25/f-net-function-minimization-optimization/
+
+Tutorials: https://msdn.microsoft.com/en-us/library/hh304363(v=vs.100).aspx
