@@ -60,6 +60,8 @@
     <None Include="HelloWorld.fsx" />
     <None Include="LinearEquations.fsx" />
     <None Include="StringsComparison.fsx" />
+    <None Include="ReadingFromFile.fsx" />
+    <None Include="WritingToFile.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
