@@ -65,6 +65,7 @@
     <None Include="ReadingFromFile.fsx" />
     <None Include="WritingToFile.fsx" />
     <None Include="AccordLinearEquations.fsx" />
+    <None Include="BfgsGradientDescent.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Accord">
