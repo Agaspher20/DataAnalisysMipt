@@ -7,7 +7,7 @@ open System.Text.RegularExpressions
 open MathNet.Numerics
 
 let filePath = __SOURCE_DIRECTORY__ + @"..\..\..\Data\sentences.txt"
-let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission-1.txt"
+let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission_fs-1.txt"
 
 let cosine (line0:float[]) (line1:float[]) = Distance.Cosine(line0, line1)
 

@@ -6,7 +6,7 @@ open System.IO
 open Accord
 open Accord.Math
 
-let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission-2.txt"
+let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission_fs-2.txt"
 
 let func (x:float) = sin(x/5.) * exp(x/10.) + 5. * exp(-x/2.)
 
