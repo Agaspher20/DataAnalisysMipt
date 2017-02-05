@@ -1,12 +1,14 @@
 ﻿#I @"..\packages\"
 #r @"Accord.3.4.0\lib\net46\Accord.dll"
 #r @"Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
+#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
 
 open System
 open System.IO
 open Accord
 open Accord.Math
 open Accord.Math.Optimization
+open FSharp.Charting
 
 let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission_fs-1.txt"
 
@@ -38,3 +40,5 @@ printfn "%s" result
 let resultWriter = File.CreateText resultPath
 resultWriter.Write result
 resultWriter.Close()
+
+Chart.Line ({0..30} |> Seq.map (fun point -> point |> float |> func))
