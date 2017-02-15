@@ -66,6 +66,7 @@
     <None Include="WritingToFile.fsx" />
     <None Include="AccordLinearEquations.fsx" />
     <None Include="BfgsGradientDescent.fsx" />
+    <None Include="CentralLimitTheorem.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Accord">
