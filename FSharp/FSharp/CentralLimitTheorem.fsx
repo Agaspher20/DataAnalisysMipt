@@ -21,14 +21,20 @@ let sqrt x = System.Math.Sqrt x
 
 let min = 0.
 let max = 1.
-let arcSinDistrib = Beta(0.5, 0.5)
+let sampleSize = 1000
+let stepSize = 0.001
+// let lambda = 1.
+let variance = 1./8. // 1./(lambda**2.)
+let mean = 0.5 // 1./lambda
+let initialDistribution = Beta(0.5, 0.5) // Exponential(lambda)
 let hist (data:seq<float>) = histogram min max data
 let lin (data:seq<float*float>) = line min max data
     
-let samples = arcSinDistrib.Samples()
-              |> Seq.take 1000
-let pdf = seq{ 0.001 .. 0.001 .. 0.999 }
-          |> Seq.map(fun n -> n,arcSinDistrib.Density(n))
+let samples = initialDistribution.Samples()
+              |> Seq.take sampleSize
+let pdf = seq{ (min + stepSize) .. stepSize .. (max - stepSize) }
+          |> Seq.map(fun n -> n,initialDistribution.Density(n))
+
 Chart.Rows([hist samples; lin pdf])
 
 let buildRange (distribution:IContinuousDistribution)
@@ -50,11 +56,9 @@ let buildNormalDistribution (mean:float)
     seq { min .. step .. max }
     |> Seq.map (fun x -> x,n.Density(x))
 
-let variance = 1./8. // variance
-let mean = 0.5 // mean
 let assembleData (size:int) =
-    buildRange arcSinDistrib size 1000,
-    buildNormalDistribution mean variance 0. 1. size 0.001
+    buildRange initialDistribution size sampleSize,
+    buildNormalDistribution mean variance min max size stepSize
 
 let fiveRange,fiveNormal = assembleData 5
 Chart.Rows([ hist fiveRange; lin fiveNormal ])
