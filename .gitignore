@@ -1,5 +1,7 @@
 Results/
 FSharp/packages/
-FSharp/FSharp/obj/
 FSharp/.vs/
-FSharp/FSharp/bin/
+FSharp/BasicMath/bin/
+FSharp/BasicMath/obj/
+FSharp/MachineLearning/bin/
+FSharp/MachineLearning/obj/
