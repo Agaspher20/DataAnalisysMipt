@@ -2,6 +2,7 @@
 #r @"FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll" 
 #r @"MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
 #r @"MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
 
 open System
 open System.IO
@@ -9,6 +10,7 @@ open FSharp.Data
 open MathNet.Numerics
 open MathNet.Numerics.Statistics
 open MathNet.Numerics.LinearAlgebra
+open FSharp.Charting
 
 [<Literal>]
 let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\"
@@ -112,31 +114,18 @@ let updateWeights eta
                 |> List.map (fun x -> x * 2.*eta/l*stepDiff)
     (w,diff) ||> List.zip |> List.map (fun (wv, d) -> wv-d)
 
-let rec stochasticGradientDescentStep (rnd:Random)
+let stochasticGradientDescentStep (rnd:Random)
                            eta
-                           (minWeightDist:float)
-                           (maxIter:int)
-                           (weightDist:float)
-                           iterNum
                            (y:List<float>)
                            (X:List<List<float>>)
                            prevWeights =
-    if (weightDist <= minWeightDist) || (iterNum >= maxIter)
-    then
-        prevWeights,[]
-    else
-        let randomIndex = rnd.Next(0, y.Length)
-        let weights = (y.[randomIndex], X.[randomIndex], prevWeights)
-                        |||> updateWeights eta y.Length
-        let distance = (weights,prevWeights)
-                        ||> List.zip
-                        |> List.sumBy(fun (w,pw) -> (w-pw)**2.)
-                        |> (fun v -> Math.Sqrt(v))
-        let error = (weights,X)
-                     ||> linearPrediction
-                     |> (msError y)
-        let resWeights,resErrors = weights |> stochasticGradientDescentStep rnd eta minWeightDist maxIter distance (iterNum+1) y X
-        resWeights,List.concat([[error];resErrors])
+    let randomIndex = rnd.Next(0, y.Length)
+    let weights = (y.[randomIndex], X.[randomIndex], prevWeights)
+                    |||> updateWeights eta y.Length
+    let error = (weights,X)
+                ||> linearPrediction
+                |> (msError y)
+    weights,error
 
 let stochasticGradientDescent seed
                               eta
@@ -145,7 +134,27 @@ let stochasticGradientDescent seed
                               y
                               X
                               wInit =
+    let mutable iterNum = 0
+    let mutable distance = Double.MaxValue
+    let mutable weights = wInit
+    let mutable errors = []
     let rnd = Random(seed)
-    wInit |> stochasticGradientDescentStep rnd eta minWeightDist maxIter Double.MaxValue 0 y X
+    while (distance > minWeightDist) && iterNum < maxIter do
+        let (stepWeights,stepError) = weights |> stochasticGradientDescentStep rnd eta y X
+        distance <- (stepWeights,weights)
+            ||> List.zip
+            |> List.sumBy(fun (w,pw) -> (w-pw)**2.)
+            |> (fun v -> Math.Sqrt(v))
+        weights <- stepWeights
+        errors <- [stepError] |> List.append errors
+        iterNum <- iterNum + 1
+    (weights,errors)
 
-let gradientWeights = [0.;0.;0.;0.] |> stochasticGradientDescent 42 0.01 (1./10.**8.) 100000 y scaledX
+let gradientWeights,gradientErrors = [0.;0.;0.;0.] |> stochasticGradientDescent 42 0.01 (1./10.**8.) 100000 y scaledX
+
+gradientErrors |> Chart.Line
+
+let answer4 = gradientErrors |> List.last
+
+writeResult "4.txt" answer4
+printfn "%.3f" answer4
