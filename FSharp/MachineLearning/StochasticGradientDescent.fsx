@@ -19,7 +19,7 @@ let DataPath = __SOURCE_DIRECTORY__ + @"..\..\..\Data\advertising.csv"
 
 let writeToFile path name (result:float) =
     use file = File.CreateText(path + name)
-    file.Write(Math.Round(result))
+    file.Write(Math.Round(result, 3))
     file.Close()
 
 let writeResult = writeToFile resultPath
