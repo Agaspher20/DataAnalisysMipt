@@ -27,14 +27,77 @@ let writeResult = writeToFile resultPath
 type Data = CsvProvider<DataPath, Schema="int,float,float,float,float">
 type Observation = Data.Row
 
-let dataSet = Data.Load(DataPath)
+let formatRow (row:Observation) =
+    sprintf "%-7i %-7.3f %-7.3f %-15.3f %-7.3f" row.Index row.TV row.Radio row.Newspaper row.Sales
+let maxX max (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Max=max)
+let maxY max (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Max=max)
+let minX min (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Min=min)
+let minY min (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Min=min)
+let titleX title (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Title=title)
+let titleY title (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Title=title)
+let withoutXAxis (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Enabled=false)
+let withoutYAxis (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Enabled=false)
+let hideXLabels (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
+let hideYLabels (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
+let namedAs name (chart:ChartTypes.GenericChart) =
+    chart.WithStyling(Name=name)
+let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
 
+let dataSet = Data.Load(DataPath)
 dataSet.Headers.Value
+|> Array.map (fun h -> sprintf "%-*s" (if h.Length > 7 then h.Length else 7) h)
 |> String.concat "\t"
 |> (printfn "%s")
 dataSet.Rows
 |> Seq.take 5
-|> Seq.iter (printfn "%A")
+|> Seq.map formatRow
+|> Seq.iter (printfn "%s")
+
+let dataPP =
+    dataSet.Rows
+    |> Seq.map (fun row -> [row.Index|>float; row.TV; row.Radio; row.Newspaper; row.Sales])
+let titles = [|"Index";"TV";"Radio";"Newspaper";"Sales"|]
+let pairPlotData = [|
+                    dataPP |> Seq.map (fun l -> l.[0]);
+                    dataPP |> Seq.map (fun l -> l.[1]);
+                    dataPP |> Seq.map (fun l -> l.[2]);
+                    dataPP |> Seq.map (fun l -> l.[3]);
+                    dataPP |> Seq.map (fun l -> l.[4])
+                   |]
+                   |> Array.zip titles
+                   |> Array.Parallel.map(fun (t,d) -> (t,d,d|>Seq.max,d|>Seq.min))
+pairPlotData
+|> Array.Parallel.mapi (fun i (ti,di,maxi,mini) ->
+    pairPlotData
+    |> Array.Parallel.mapi (fun j (tj,dj,maxj,minj) ->
+        let setBounds = maxX maxi >> maxY maxj >> minX mini >> minY minj
+        let ch = match i=j with
+                 | true -> dj |> Chart.Histogram
+                 | false -> (di,dj)
+                            ||> Seq.zip
+                            |> Chart.Point
+                            |> setBounds
+        let titledCh = match j with
+                       | 0 -> match i with
+                              | 4 -> ch |> titleY ti |> titleX tj
+                              | _ -> ch |> titleY ti |> withoutXAxis
+                       | _ -> match i with
+                              | 4 -> ch |> titleX tj |> withoutYAxis
+                              | _ -> ch |> withoutXAxis |> withoutYAxis
+        titledCh |> hideXLabels |> hideYLabels)
+    |> Chart.Columns)
+|> Chart.Rows
+|> namedAs "Pair plot"
 
 let X,y = dataSet.Rows
           |> Seq.map (fun row -> (row.TV,row.Radio,row.Newspaper),row.Sales)
@@ -58,17 +121,15 @@ let scaleRow (tv,radio,newspaper)
     (scale tv tvm tvs
     ,scale radio radiom radios
     , scale newspaper newspaperm newspapers)
-let scaledX = X
-              |> List.map(fun obs -> scaleRow obs means stds)
-              |> List.map(fun (tv,radio,news) -> [tv;radio;news;1.])
-
+let scaledX = X |> List.map(fun obs ->
+                let (tv,radio,news) = scaleRow obs means stds
+                [tv;radio;news;1.])
 let msError (ys:List<float>) (yPredicteds:List<float>) =
     let length = ys |> List.length |> float
     let sum = (ys, yPredicteds)
                 ||> List.zip
                 |> List.sumBy(fun (y, yPred) -> (y-yPred)**2.)
     sum/length
-
 let median = Statistics.Median(y)
 let answer1 = List.init (y.Length) (fun index -> median) |> msError y
 writeResult "1.txt" answer1
@@ -95,7 +156,6 @@ writeResult "2.txt" answer2
 printfn "%.3f" answer2
 
 let linearPrediction w X = X |> List.map (linearModel w)
-
 let answer3 = scaledX |> (linearPrediction normalEquationWeights) |> (msError y)
 
 writeResult "3.txt" answer3
@@ -152,7 +212,22 @@ let stochasticGradientDescent seed
 
 let gradientWeights,gradientErrors = [0.;0.;0.;0.] |> stochasticGradientDescent 42 0.01 (1./10.**8.) 100000 y scaledX
 
-gradientErrors |> Chart.Line
+gradientErrors
+|> List.take 50
+|> Chart.Line
+|> minY 221.
+|> maxY 224.
+|> namedAs "Mean square error from first 50 iterations dependency"
+|> withTitle "MSE (i)"
+|> titleX "iterations count"
+|> titleY "MSE"
+
+gradientErrors
+|> Chart.Line
+|> namedAs "Mean square error from iterations count dependency"
+|> withTitle "MSE (i)"
+|> titleX "iterations count"
+|> titleY "MSE"
 
 let answer4 = gradientErrors |> List.last
 
