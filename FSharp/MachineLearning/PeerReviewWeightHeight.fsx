@@ -24,22 +24,91 @@ type Observation = Data.Row
 let dataSet = Data.Load(DataPath)
 let data = dataSet.Rows
 
-printfn "%A" dataSet.Headers
-data |> Seq.take 5 |> Seq.iter (printfn "%A")
+let formatRow (row:Observation) =
+    sprintf "%-5i %6.2f %6.2f" row.Index row.Height row.Weight
 
-// Height distribution
-data |> Seq.map(fun obs -> obs.Height) |> Chart.Histogram
+let maxX max (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Max=max)
+let maxY max (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Max=max)
+let minX min (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Min=min)
+let minY min (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Min=min)
+let titleX title (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Title=title)
+let withoutXAxis (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(Enabled=false)
+let withoutYAxis (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Enabled=false)
+let titleY title (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(Title=title)
+let namedAs name (chart:ChartTypes.GenericChart) =
+    chart.WithStyling(Name=name)
+let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
 
-// Weight distribution
-data |> Seq.map(fun obs -> obs.Weight) |> Chart.Histogram
+(match dataSet.Headers with
+    | Some heads -> heads
+    | None -> [||])
+|> (String.concat " ")
+|> (printfn "%s")
+data |> Seq.take 5 |> Seq.iter (formatRow >>(printfn "%s"))
+
+[
+    data
+    |> Seq.map(fun obs -> obs.Height)
+    |> Chart.Histogram
+    |> maxY 2700.
+    |> namedAs "Height distribution"
+    |> titleX "Height";
+    data
+    |> Seq.map(fun obs -> obs.Weight)
+    |> Chart.Histogram
+    |> maxY 2800.
+    |> namedAs "Weight distribution"
+    |> titleX "Weight"
+]
+|> Chart.Rows
+|> namedAs "Height and Weight distribution"
 
 let makeBmi height weight =
     let meterToInch, kiloToPound = 39.37,2.20462
     (weight/kiloToPound)/(height/meterToInch)**2.
 
 let dataBmi = data
-              |> Seq.map(fun obs -> (obs.Height,obs.Weight,(makeBmi obs.Height obs.Weight)))
-// didn't find pair plot
+              |> Seq.map(fun obs -> [obs.Height;obs.Weight;(makeBmi obs.Height obs.Weight)])
+let titles = [|"Height";"Weight";"BMI"|]
+let pairPlotData = [|
+                    dataBmi |> Seq.map (fun l -> l.[0]);
+                    dataBmi |> Seq.map (fun l -> l.[1]);
+                    dataBmi |> Seq.map (fun l -> l.[2])
+                   |]
+                   |> Array.zip titles
+                   |> Array.Parallel.map(fun (t,d) -> (t,d,d|>Seq.max,d|>Seq.min))
+
+pairPlotData
+|> Array.Parallel.mapi (fun i (ti,di,maxi,mini) ->
+    pairPlotData
+    |> Array.Parallel.mapi (fun j (tj,dj,maxj,minj) ->
+        let setBounds = maxX maxi >> maxY maxj >> minX mini >> minY minj
+        let ch = match i=j with
+                 | true -> dj |> Chart.Histogram
+                 | false -> (di,dj)
+                            ||> Seq.zip
+                            |> Chart.Point
+                            |> setBounds
+        let titledCh = match j with
+                       | 0 -> match i with
+                              | 2 -> ch |> titleY ti |> titleX tj
+                              | _ -> ch |> titleY ti |> withoutXAxis
+                       | _ -> match i with
+                              | 2 -> ch |> titleX tj |> withoutYAxis
+                              | _ -> ch |> withoutXAxis |> withoutYAxis
+        titledCh)
+    |> Chart.Columns)
+|> Chart.Rows
+|> namedAs "Pair plot"
+
 let makeWeightCategory weight =
     match weight with
     | w when w < 120. -> 1
@@ -52,8 +121,13 @@ data
     |> Chart.BoxPlotFromData
 
 data
-    |> Seq.map(fun obs -> (obs.Weight, obs.Height))
-    |> Chart.Point
+|> Seq.map(fun obs -> (obs.Weight, obs.Height))
+|> Chart.Point
+|> minY 59.
+|> maxY 76.
+|> titleX "Weight"
+|> titleY "Height"
+|> namedAs "Height from Weight dependency"
 
 let linearApproximation ((w0:float),(w1:float)) (weight:float) =
     w0 + w1*weight
