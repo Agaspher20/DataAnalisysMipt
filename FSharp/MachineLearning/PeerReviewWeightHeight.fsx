@@ -21,12 +21,8 @@ let DataPath = __SOURCE_DIRECTORY__ + @"..\..\..\Data\weights_heights.csv"
 type Data = CsvProvider<DataPath, Schema="int,float,float">
 type Observation = Data.Row
 
-let dataSet = Data.Load(DataPath)
-let data = dataSet.Rows
-
 let formatRow (row:Observation) =
-    sprintf "%-5i %6.2f %6.2f" row.Index row.Height row.Weight
-
+    sprintf "%-7i %-7.3f %-7.3f" row.Index row.Height row.Weight
 let maxX max (chart:ChartTypes.GenericChart) =
     chart.WithXAxis(Max=max)
 let maxY max (chart:ChartTypes.GenericChart) =
@@ -46,10 +42,17 @@ let titleY title (chart:ChartTypes.GenericChart) =
 let namedAs name (chart:ChartTypes.GenericChart) =
     chart.WithStyling(Name=name)
 let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
+let hideXLabels (chart:ChartTypes.GenericChart) =
+    chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
+let hideYLabels (chart:ChartTypes.GenericChart) =
+    chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
 
+let dataSet = Data.Load(DataPath)
+let data = dataSet.Rows
 (match dataSet.Headers with
     | Some heads -> heads
     | None -> [||])
+|> Array.map (sprintf "%-7s")
 |> (String.concat " ")
 |> (printfn "%s")
 data |> Seq.take 5 |> Seq.iter (formatRow >>(printfn "%s"))
@@ -74,7 +77,6 @@ data |> Seq.take 5 |> Seq.iter (formatRow >>(printfn "%s"))
 let makeBmi height weight =
     let meterToInch, kiloToPound = 39.37,2.20462
     (weight/kiloToPound)/(height/meterToInch)**2.
-
 let dataBmi = data
               |> Seq.map(fun obs -> [obs.Height;obs.Weight;(makeBmi obs.Height obs.Weight)])
 let titles = [|"Height";"Weight";"BMI"|]
@@ -85,7 +87,6 @@ let pairPlotData = [|
                    |]
                    |> Array.zip titles
                    |> Array.Parallel.map(fun (t,d) -> (t,d,d|>Seq.max,d|>Seq.min))
-
 pairPlotData
 |> Array.Parallel.mapi (fun i (ti,di,maxi,mini) ->
     pairPlotData
@@ -104,7 +105,7 @@ pairPlotData
                        | _ -> match i with
                               | 2 -> ch |> titleX tj |> withoutYAxis
                               | _ -> ch |> withoutXAxis |> withoutYAxis
-        titledCh)
+        titledCh |> hideXLabels |> hideYLabels)
     |> Chart.Columns)
 |> Chart.Rows
 |> namedAs "Pair plot"
@@ -119,6 +120,8 @@ data
     |> Seq.groupBy(fun (_,w) -> w)
     |> Seq.map(fun(k,values) -> (k,values|>Seq.map fst))
     |> Chart.BoxPlotFromData
+    |> minY 64.
+    |> maxY 73.
 
 data
 |> Seq.map(fun obs -> (obs.Weight, obs.Height))
@@ -135,7 +138,7 @@ let quadError w (data:seq<Observation>) =
     data
     |> Seq.sumBy (fun obs -> (obs.Height - (linearApproximation w obs.Weight))**2.)
 
-Chart.Combine [
+[
     data
     |> Seq.map(fun obs -> (obs.Weight, obs.Height))
     |> Chart.Point
@@ -146,19 +149,28 @@ Chart.Combine [
     |> Seq.map (fun x -> (x, linearApproximation (50.,0.16) x))
     |> Chart.Line
 ]
+|> Chart.Combine
+|> minY 55.
+|> maxY 80.
+|> titleX "Weight"
+|> titleY "Height"
 
 seq { -5. .. 0.2 .. 5. }
 |> Seq.map(fun x -> (x, quadError (50., x) data))
 |> Chart.Line
+|> withTitle "Q(w2)"
+|> namedAs "Quadratic error from w2 dependency"
+|> titleX "w2"
+|> titleY "Q"
 
 // didn't find method to optimize only coefficient
-
 let ols = OrdinaryLeastSquares()
 let regression = ols.Learn(
                      data |> Seq.map(fun obs -> obs.Weight) |> Seq.toArray,
-                     data |> Seq.map(fun obs -> obs.Height) |> Seq.toArray)
+                     data |> Seq.map(fun obs -> obs.Height) |> Seq.toArray
+                     )
 let w = (regression.Intercept,regression.Slope)
-Chart.Combine [
+[
     data
     |> Seq.map(fun obs -> (obs.Weight, obs.Height))
     |> Chart.Point
@@ -166,3 +178,8 @@ Chart.Combine [
     |> Seq.map(fun obs -> obs.Weight,linearApproximation w obs.Weight)
     |> Chart.Line
 ]
+|> Chart.Combine
+|> minY 55.
+|> maxY 80.
+|> titleX "Weight"
+|> titleY "Height"
