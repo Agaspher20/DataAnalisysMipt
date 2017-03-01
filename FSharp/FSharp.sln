@@ -7,6 +7,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BasicMath", "BasicMath\Basi
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MachineLearning", "MachineLearning\MachineLearning.fsproj", "{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LibExtensions", "LibExtensions\LibExtensions.fsproj", "{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

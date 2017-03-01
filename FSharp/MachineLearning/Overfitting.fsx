@@ -1,14 +1,14 @@
-#I @"..\packages\"
-#r @"MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
-#r @"MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
-#r @"FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll"
-#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
+#r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
+#r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+#r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll"
+#r @"bin\Debug\LibExtensions.dll"
+
 
 open System
 open MathNet.Numerics
 open MathNet.Numerics.LinearAlgebra
 
-open FSharp.Charting
+open LibExtensions.Charting
 open FSharp.Data
 
 [<Literal>]

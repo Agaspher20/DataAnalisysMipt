@@ -1,7 +1,7 @@
-﻿#I @"..\packages\"
-#r @"Accord.3.4.0\lib\net46\Accord.dll"
-#r @"Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
-#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
+﻿#r @"..\packages\Accord.3.4.0\lib\net46\Accord.dll"
+#r @"..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
+#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
+#r @"bin\Debug\LibExtensions.dll"
 
 open System
 open System.IO
@@ -9,6 +9,7 @@ open Accord
 open Accord.Math
 open Accord.Math.Optimization
 open FSharp.Charting
+open LibExtensions.Charting
 
 let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\submission_fs-1.txt"
 
@@ -41,4 +42,10 @@ let resultWriter = File.CreateText resultPath
 resultWriter.Write result
 resultWriter.Close()
 
-Chart.Line ({0..30} |> Seq.map (fun point -> point |> float |> func))
+({0..30} |> Seq.map (fun point -> point |> float |> func))
+|> Chart.Line
+|> titleX "X"
+|> titleY "Y"
+|> withTitle "y(x)"
+|> namedAs "y from x dependency"
+|> Chart.Show

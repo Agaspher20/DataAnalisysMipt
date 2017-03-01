@@ -1,8 +1,8 @@
-﻿#I @"..\packages\"
-#r @"FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll" 
-#r @"MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
-#r @"MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
-#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
+﻿#r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll" 
+#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
+#r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
+#r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+#r @"bin\Debug\LibExtensions.dll"
 
 open System
 open System.IO
@@ -11,6 +11,7 @@ open MathNet.Numerics
 open MathNet.Numerics.Statistics
 open MathNet.Numerics.LinearAlgebra
 open FSharp.Charting
+open LibExtensions.Charting
 
 [<Literal>]
 let resultPath = __SOURCE_DIRECTORY__ + @"..\..\..\Results\"
@@ -29,29 +30,6 @@ type Observation = Data.Row
 
 let formatRow (row:Observation) =
     sprintf "%-7i %-7.3f %-7.3f %-15.3f %-7.3f" row.Index row.TV row.Radio row.Newspaper row.Sales
-let maxX max (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Max=max)
-let maxY max (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Max=max)
-let minX min (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Min=min)
-let minY min (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Min=min)
-let titleX title (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Title=title)
-let titleY title (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Title=title)
-let withoutXAxis (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Enabled=false)
-let withoutYAxis (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Enabled=false)
-let hideXLabels (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
-let hideYLabels (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
-let namedAs name (chart:ChartTypes.GenericChart) =
-    chart.WithStyling(Name=name)
-let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
 
 let dataSet = Data.Load(DataPath)
 dataSet.Headers.Value
@@ -66,38 +44,17 @@ dataSet.Rows
 let dataPP =
     dataSet.Rows
     |> Seq.map (fun row -> [row.Index|>float; row.TV; row.Radio; row.Newspaper; row.Sales])
-let titles = [|"Index";"TV";"Radio";"Newspaper";"Sales"|]
+let titles = [|"TV";"Radio";"Newspaper";"Sales"|]
 let pairPlotData = [|
-                    dataPP |> Seq.map (fun l -> l.[0]);
                     dataPP |> Seq.map (fun l -> l.[1]);
                     dataPP |> Seq.map (fun l -> l.[2]);
                     dataPP |> Seq.map (fun l -> l.[3]);
                     dataPP |> Seq.map (fun l -> l.[4])
                    |]
-                   |> Array.zip titles
-                   |> Array.Parallel.map(fun (t,d) -> (t,d,d|>Seq.max,d|>Seq.min))
-pairPlotData
-|> Array.Parallel.mapi (fun i (ti,di,maxi,mini) ->
-    pairPlotData
-    |> Array.Parallel.mapi (fun j (tj,dj,maxj,minj) ->
-        let setBounds = maxX maxi >> maxY maxj >> minX mini >> minY minj
-        let ch = match i=j with
-                 | true -> dj |> Chart.Histogram
-                 | false -> (di,dj)
-                            ||> Seq.zip
-                            |> Chart.Point
-                            |> setBounds
-        let titledCh = match j with
-                       | 0 -> match i with
-                              | 4 -> ch |> titleY ti |> titleX tj
-                              | _ -> ch |> titleY ti |> withoutXAxis
-                       | _ -> match i with
-                              | 4 -> ch |> titleX tj |> withoutYAxis
-                              | _ -> ch |> withoutXAxis |> withoutYAxis
-        titledCh |> hideXLabels |> hideYLabels)
-    |> Chart.Columns)
-|> Chart.Rows
+(titles,pairPlotData)
+||> pairPlot
 |> namedAs "Pair plot"
+|> Chart.Show
 
 let X,y = dataSet.Rows
           |> Seq.map (fun row -> (row.TV,row.Radio,row.Newspaper),row.Sales)
@@ -221,6 +178,7 @@ gradientErrors
 |> withTitle "MSE (i)"
 |> titleX "iterations count"
 |> titleY "MSE"
+|> Chart.Show
 
 gradientErrors
 |> Chart.Line
@@ -228,6 +186,7 @@ gradientErrors
 |> withTitle "MSE (i)"
 |> titleX "iterations count"
 |> titleY "MSE"
+|> Chart.Show
 
 let answer4 = gradientErrors |> List.last
 

@@ -1,18 +1,15 @@
-﻿#I @"..\packages\"
-#r @"MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
-#r @"MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
-#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
+﻿#r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
+#r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
+#r @"bin\Debug\LibExtensions.dll"
 
 open System
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.Statistics
 open FSharp.Charting
+open LibExtensions.Charting
 
 let calcMean (data:seq<float>) = Statistics.Mean(data)
-let line (min:float)
-         (max:float)
-         (data:seq<float*float>) =
-    Chart.Line(data).WithXAxis(Min=min,Max=max)
 let histogram (min:float)
               (max:float)
               (data:seq<float>) =
@@ -28,14 +25,18 @@ let variance = 1./8. // 1./(lambda**2.)
 let mean = 0.5 // 1./lambda
 let initialDistribution = Beta(0.5, 0.5) // Exponential(lambda)
 let hist (data:seq<float>) = histogram min max data
-let lin (data:seq<float*float>) = line min max data
+let lin (data:seq<float*float>) =
+    data
+    |> Chart.Line
+    |> minX min
+    |> maxX max
     
 let samples = initialDistribution.Samples()
               |> Seq.take sampleSize
 let pdf = seq{ (min + stepSize) .. stepSize .. (max - stepSize) }
           |> Seq.map(fun n -> n,initialDistribution.Density(n))
 
-Chart.Rows([hist samples; lin pdf])
+[hist samples; lin pdf] |> Chart.Rows |> Chart.Show
 
 let buildRange (distribution:IContinuousDistribution)
                (size:int)
@@ -61,10 +62,10 @@ let assembleData (size:int) =
     buildNormalDistribution mean variance min max size stepSize
 
 let fiveRange,fiveNormal = assembleData 5
-Chart.Rows([ hist fiveRange; lin fiveNormal ])
+[ hist fiveRange; lin fiveNormal ] |> Chart.Rows |> Chart.Show
 
 let tenRange,tenNormal = assembleData 10
-Chart.Rows([ hist tenRange; lin tenNormal ])
+[ hist tenRange; lin tenNormal ] |> Chart.Rows |> Chart.Show
 
 let fiftyRange,fiftyNormal = assembleData 50
-Chart.Rows([ hist fiftyRange; lin fiftyNormal ])
+[ hist fiftyRange; lin fiftyNormal ] |> Chart.Rows |> Chart.Show

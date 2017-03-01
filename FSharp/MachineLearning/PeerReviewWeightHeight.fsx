@@ -1,11 +1,11 @@
-﻿#I @"..\packages\"
-#r @"MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
-#r @"MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
-#r @"FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll" 
-#r @"Accord.3.4.0\lib\net46\Accord.dll"
-#r @"Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
-#r @"Accord.Statistics.3.4.0\lib\net46\Accord.Statistics.dll"
-#load @"FSharp.Charting.0.90.14\FSharp.Charting.fsx"
+﻿#r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
+#r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+#r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll" 
+#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
+#r @"..\packages\Accord.3.4.0\lib\net46\Accord.dll"
+#r @"..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
+#r @"..\packages\Accord.Statistics.3.4.0\lib\net46\Accord.Statistics.dll"
+#r @"bin\Debug\LibExtensions.dll"
 
 open System
 open MathNet.Numerics
@@ -15,6 +15,7 @@ open FSharp.Charting
 open FSharp.Data
 open Accord
 open Accord.Statistics.Models.Regression.Linear
+open LibExtensions.Charting
 
 [<Literal>]
 let DataPath = __SOURCE_DIRECTORY__ + @"..\..\..\Data\weights_heights.csv"
@@ -23,29 +24,6 @@ type Observation = Data.Row
 
 let formatRow (row:Observation) =
     sprintf "%-7i %-7.3f %-7.3f" row.Index row.Height row.Weight
-let maxX max (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Max=max)
-let maxY max (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Max=max)
-let minX min (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Min=min)
-let minY min (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Min=min)
-let titleX title (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Title=title)
-let titleY title (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Title=title)
-let withoutXAxis (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(Enabled=false)
-let withoutYAxis (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(Enabled=false)
-let namedAs name (chart:ChartTypes.GenericChart) =
-    chart.WithStyling(Name=name)
-let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
-let hideXLabels (chart:ChartTypes.GenericChart) =
-    chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
-let hideYLabels (chart:ChartTypes.GenericChart) =
-    chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
 
 let dataSet = Data.Load(DataPath)
 let data = dataSet.Rows
@@ -73,6 +51,7 @@ data |> Seq.take 5 |> Seq.iter (formatRow >>(printfn "%s"))
 ]
 |> Chart.Rows
 |> namedAs "Height and Weight distribution"
+|> Chart.Show
 
 let makeBmi height weight =
     let meterToInch, kiloToPound = 39.37,2.20462
@@ -85,30 +64,10 @@ let pairPlotData = [|
                     dataBmi |> Seq.map (fun l -> l.[1]);
                     dataBmi |> Seq.map (fun l -> l.[2])
                    |]
-                   |> Array.zip titles
-                   |> Array.Parallel.map(fun (t,d) -> (t,d,d|>Seq.max,d|>Seq.min))
-pairPlotData
-|> Array.Parallel.mapi (fun i (ti,di,maxi,mini) ->
-    pairPlotData
-    |> Array.Parallel.mapi (fun j (tj,dj,maxj,minj) ->
-        let setBounds = maxX maxi >> maxY maxj >> minX mini >> minY minj
-        let ch = match i=j with
-                 | true -> dj |> Chart.Histogram
-                 | false -> (di,dj)
-                            ||> Seq.zip
-                            |> Chart.Point
-                            |> setBounds
-        let titledCh = match j with
-                       | 0 -> match i with
-                              | 2 -> ch |> titleY ti |> titleX tj
-                              | _ -> ch |> titleY ti |> withoutXAxis
-                       | _ -> match i with
-                              | 2 -> ch |> titleX tj |> withoutYAxis
-                              | _ -> ch |> withoutXAxis |> withoutYAxis
-        titledCh |> hideXLabels |> hideYLabels)
-    |> Chart.Columns)
-|> Chart.Rows
+(titles,pairPlotData)
+||> pairPlot
 |> namedAs "Pair plot"
+|> Chart.Show
 
 let makeWeightCategory weight =
     match weight with
@@ -116,12 +75,13 @@ let makeWeightCategory weight =
     | w when w < 150. -> 2
     | _ -> 3
 data
-    |> Seq.map(fun obs -> (obs.Height,(makeWeightCategory obs.Weight)))
-    |> Seq.groupBy(fun (_,w) -> w)
-    |> Seq.map(fun(k,values) -> (k,values|>Seq.map fst))
-    |> Chart.BoxPlotFromData
-    |> minY 64.
-    |> maxY 73.
+|> Seq.map(fun obs -> (obs.Height,(makeWeightCategory obs.Weight)))
+|> Seq.groupBy(fun (_,w) -> w)
+|> Seq.map(fun(k,values) -> (k,values|>Seq.map fst))
+|> Chart.BoxPlotFromData
+|> minY 64.
+|> maxY 73.
+|> Chart.Show
 
 data
 |> Seq.map(fun obs -> (obs.Weight, obs.Height))
@@ -131,6 +91,7 @@ data
 |> titleX "Weight"
 |> titleY "Height"
 |> namedAs "Height from Weight dependency"
+|> Chart.Show
 
 let linearApproximation ((w0:float),(w1:float)) (weight:float) =
     w0 + w1*weight
@@ -154,6 +115,7 @@ let quadError w (data:seq<Observation>) =
 |> maxY 80.
 |> titleX "Weight"
 |> titleY "Height"
+|> Chart.Show
 
 seq { -5. .. 0.2 .. 5. }
 |> Seq.map(fun x -> (x, quadError (50., x) data))
@@ -162,6 +124,7 @@ seq { -5. .. 0.2 .. 5. }
 |> namedAs "Quadratic error from w2 dependency"
 |> titleX "w2"
 |> titleY "Q"
+|> Chart.Show
 
 // didn't find method to optimize only coefficient
 let ols = OrdinaryLeastSquares()
@@ -183,3 +146,4 @@ let w = (regression.Intercept,regression.Slope)
 |> maxY 80.
 |> titleX "Weight"
 |> titleY "Height"
+|> Chart.Show
