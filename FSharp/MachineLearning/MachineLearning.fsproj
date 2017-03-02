@@ -57,6 +57,7 @@
     <None Include="StochasticGradientDescent.fsx" />
     <Content Include="packages.config" />
     <None Include="Overfitting.fsx" />
+    <None Include="Metrics.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Accord">
