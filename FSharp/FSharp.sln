@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BasicMath", "BasicMath\BasicMath.fsproj", "{184FF7F6-893A-47F1-BABF-84319C9DDC4A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MachineLearning", "MachineLearning\MachineLearning.fsproj", "{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SupervisedLearning", "SupervisedLearning\SupervisedLearning.fsproj", "{3B7BC285-EAE7-48AE-AB80-46E69D372DA0}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LibExtensions", "LibExtensions\LibExtensions.fsproj", "{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}"
 EndProject
