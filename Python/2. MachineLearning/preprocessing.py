@@ -25,7 +25,7 @@ matplotlib.style.use('ggplot')
 # Полную версию данных с большим количеством признаков можно найти на https://www.kaggle.com/c/unimelb.
 
 #%%
-data = pd.read_csv('preprocessing_data.csv')
+data = pd.read_csv('..\..\Data\preprocessing_data.csv')
 data.shape
 
 # Выделим из датасета целевую переменную Grant.Status и обозначим её за y Теперь X обозначает обучающую выборку,
@@ -107,7 +107,6 @@ numeric_data = X[numeric_cols]
 numeric_means = calculate_means(numeric_data)
 X_real_zeros = np.zeros(numeric_data.shape)
 X_real_mean = np.zeros(numeric_data.shape)
-
 #%%
 for i in xrange(numeric_data.shape[0]):
     for j in xrange(numeric_data.shape[1]):
@@ -297,18 +296,163 @@ plot_scores(estimator_mean)
 #    заполнения пропущенных вещественных значений работает лучше? В дальнейшем для выполнения задания в
 #    качестве вещественных признаков используйте ту выборку, которая даёт лучшее качество на тесте.
 #%%
-zero_roc_auc = roc_auc_score(y_test, estimator_zero.predict(X_test_zero_cat))
-mean_roc_auc = roc_auc_score(y_test, estimator_mean.predict(X_test_mean_cat))
-print zero_roc_auc, mean_roc_auc
+zero_roc_auc = roc_auc_score(y_test, estimator_zero.predict_proba(X_test_zero_cat)[:,1])
+mean_roc_auc = roc_auc_score(y_test, estimator_mean.predict_proba(X_test_mean_cat)[:,1])
+print "Zero roc_auc:", zero_roc_auc
+print "Mean roc_auc:", mean_roc_auc
+print "Best algorithm: ", "Zero" if zero_roc_auc > mean_roc_auc else "Mean"
 # 5. Передайте два значения AUC ROC (сначала для выборки, заполненной средними, потом для выборки,
 #    заполненной нулями) в функцию write_answer_1 и запустите её. Полученный файл является ответом на 1 задание.
 #%%
 def write_answer_1(auc_1, auc_2):
     auc = (auc_1 + auc_2)/2
-    with open("preprocessing_lr_answer1.txt", "w") as fout:
+    with open("..\..\Results\preprocessing_lr_answer1.txt", "w") as fout:
         fout.write(str(auc))
 #%%
 write_answer_1(mean_roc_auc,zero_roc_auc)
 # 6. Информация для интересующихся: вообще говоря, не вполне логично оптимизировать на кросс-валидации заданный
 #    по умолчанию в классе логистической регрессии функционал accuracy, а измерять на тесте AUC ROC, но это,
 #    как и ограничение размера выборки, сделано для ускорения работы процесса кросс-валидации.
+
+#%%
+from pandas.tools.plotting import scatter_matrix
+
+data_numeric = pd.DataFrame(X_train_real_zeros, columns=numeric_cols)
+list_cols = ['Number.of.Successful.Grant.1', 'SEO.Percentage.2', 'Year.of.Birth.1']
+scatter_matrix(data_numeric[list_cols], alpha=0.5, figsize=(10, 10))
+plt.show()
+
+#%%
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaler.fit(X_train_real_zeros)
+X_train_real_scaled = scaler.transform(X_train_real_zeros)
+X_test_real_scaled = scaler.transform(X_test_real_zeros)
+
+#%%
+data_numeric_scaled = pd.DataFrame(X_train_real_scaled, columns=numeric_cols)
+list_cols = ['Number.of.Successful.Grant.1', 'SEO.Percentage.2', 'Year.of.Birth.1']
+scatter_matrix(data_numeric_scaled[list_cols], alpha=0.5, figsize=(10, 10))
+plt.show()
+
+## Задание 2
+# 1. Обучите ещё раз регрессию и гиперпараметры на новых признаках, объединив их с закодированными
+#    категориальными.
+#%%
+X_train_scaled_cat = np.hstack((X_train_real_zeros,X_train_cat_oh))
+X_test_scaled_cat = np.hstack((X_test_real_zeros,X_test_cat_oh))
+optimizer_scaled = LogisticRegression('l2')
+estimator_scaled = GridSearchCV(optimizer_scaled, param_grid, cv=cv)
+#%%
+estimator_scaled.fit(X_train_scaled_cat, y_train)
+best_scaled_optimizer = estimator_scaled.best_estimator_
+best_scaled_params = estimator_scaled.best_params_
+best_scaled_params
+# 2. Проверьте, был ли найден оптимум accuracy по гиперпараметрам во время кроссвалидации.
+#%%
+print "scaled"
+plot_scores(estimator_scaled)
+# 3. Получите значение ROC AUC на тестовой выборке, сравните с лучшим результатом, полученными ранее.
+#%%
+scaled_roc_auc = roc_auc_score(y_test, estimator_scaled.predict_proba(X_test_scaled_cat)[:,1])
+print "Scaled roc_auc:", scaled_roc_auc
+# 4. Запишите полученный ответ в файл при помощи функции write_answer_2.
+#%%
+def write_answer_2(auc):
+    with open("..\..\Results\preprocessing_lr_answer2.txt", "w") as fout:
+        fout.write(str(auc))
+#%%
+write_answer_2(scaled_roc_auc)
+
+## Балансировка классов.
+# Алгоритмы классификации могут быть очень чувствительны к несбалансированным классам.
+# Рассмотрим пример с выборками, сэмплированными из двух гауссиан. Их мат. ожидания и
+# матрицы ковариации заданы так, что истинная разделяющая поверхность должна проходить
+# параллельно оси x. Поместим в обучающую выборку 20 объектов, сэмплированных из 1-й
+# гауссианы, и 10 объектов из 2-й. После этого обучим на них линейную регрессию, и построим
+# на графиках объекты и области классификации.
+#%%
+np.random.seed(0)
+"""Сэмплируем данные из первой гауссианы"""
+data_0 = np.random.multivariate_normal([0,0], [[0.5,0],[0,0.5]], size=40)
+"""И из второй"""
+data_1 = np.random.multivariate_normal([0,1], [[0.5,0],[0,0.5]], size=40)
+"""На обучение берём 20 объектов из первого класса и 10 из второго"""
+example_data_train = np.vstack([data_0[:20,:], data_1[:10,:]])
+example_labels_train = np.concatenate([np.zeros((20)), np.ones((10))])
+"""На тест - 20 из первого и 30 из второго"""
+example_data_test = np.vstack([data_0[20:,:], data_1[10:,:]])
+example_labels_test = np.concatenate([np.zeros((20)), np.ones((30))])
+"""Задаём координатную сетку, на которой будем вычислять область классификации"""
+xx, yy = np.meshgrid(np.arange(-3, 3, 0.02), np.arange(-3, 3, 0.02))
+"""Обучаем регрессию без балансировки по классам"""
+optimizer = GridSearchCV(LogisticRegression(), param_grid, cv=cv, n_jobs=-1)
+optimizer.fit(example_data_train, example_labels_train)
+"""Строим предсказания регрессии для сетки"""
+Z = optimizer.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
+plt.scatter(data_0[:,0], data_0[:,1], color='red')
+plt.scatter(data_1[:,0], data_1[:,1], color='blue')
+"""Считаем AUC"""
+auc_wo_class_weights = roc_auc_score(example_labels_test, optimizer.predict_proba(example_data_test)[:,1])
+plt.title('Without class weights')
+plt.show()
+print('AUC: %f'%auc_wo_class_weights)
+"""Для второй регрессии в LogisticRegression передаём параметр class_weight='balanced'"""
+optimizer = GridSearchCV(LogisticRegression(class_weight='balanced'), param_grid, cv=cv, n_jobs=-1)
+optimizer.fit(example_data_train, example_labels_train)
+Z = optimizer.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
+plt.scatter(data_0[:,0], data_0[:,1], color='red')
+plt.scatter(data_1[:,0], data_1[:,1], color='blue')
+auc_w_class_weights = roc_auc_score(example_labels_test, optimizer.predict_proba(example_data_test)[:,1])
+plt.title('With class weights')
+plt.show()
+print('AUC: %f'%auc_w_class_weights)
+
+#Как видно, во втором случае классификатор находит разделяющую поверхность, которая ближе
+# к истинной, т.е. меньше переобучается. Поэтому на сбалансированность классов в обучающей
+# выборке всегда следует обращать внимание.
+# Посмотрим, сбалансированны ли классы в нашей обучающей выборке:
+#%%
+print(np.sum(y_train==0))
+print(np.sum(y_train==1))
+
+## Задание 3. Балансировка классов.
+# 1. Обучите логистическую регрессию и гиперпараметры с балансировкой классов, используя веса
+#    (параметр class_weight='balanced' регрессии) на отмасштабированных выборках, полученных
+#    в предыдущем задании. Убедитесь, что вы нашли максимум accuracy по гиперпараметрам.
+#%%
+balanced_optimizer = LogisticRegression('l2', class_weight='balanced')
+balanced_estimator = GridSearchCV(balanced_optimizer, param_grid, cv=cv)
+#%%
+balanced_estimator.fit(X_train_scaled_cat, y_train)
+best_balanced_optimizer = estimator_scaled.best_estimator_
+best_balanced_params = estimator_scaled.best_params_
+best_balanced_params
+# 2. Получите метрику ROC AUC на тестовой выборке.
+#%%
+balanced_roc_auc = roc_auc_score(y_test, balanced_estimator.predict_proba(X_test_scaled_cat)[:,1])
+print "Scaled roc_auc:", balanced_roc_auc
+# 3. Сбалансируйте выборку, досэмплировав в неё объекты из меньшего класса. Для получения индексов
+#    объектов, которые требуется добавить в обучающую выборку, используйте следующую комбинацию
+#    вызовов функций:
+#       np.random.seed(0)
+#       indices_to_add = np.random.randint(...)
+#       X_train_to_add = X_train[y_train.as_matrix() == 1,:][indices_to_add,:]
+#    После этого добавьте эти объекты в начало или конец обучающей выборки. Дополните соответствующим
+#    образом вектор ответов.
+#%%
+y_train.
+#%%
+((y_train.as_matrix() == 1)[1],y_train[1])
+#%%
+zeros_count = np.sum(y_train==0)
+ones_count = np.sum(y_train==1)
+np.random.seed(0)
+
+indices_to_add = np.random.randint(0, len(y_train), zeros_count-ones_count)
+# 4. Получите метрику ROC AUC на тестовой выборке, сравните с предыдущим результатом.
+# 5. Внесите ответы в выходной файл при помощи функции write_asnwer_3, передав в неё сначала
+#    ROC AUC для балансировки весами, а потом балансировки выборки вручную.
+#%%
