@@ -107,7 +107,6 @@ numeric_data = X[numeric_cols]
 numeric_means = calculate_means(numeric_data)
 X_real_zeros = np.zeros(numeric_data.shape)
 X_real_mean = np.zeros(numeric_data.shape)
-#%%
 for i in xrange(numeric_data.shape[0]):
     for j in xrange(numeric_data.shape[1]):
         numeric_value = numeric_data.iloc[i,j]
@@ -117,8 +116,6 @@ for i in xrange(numeric_data.shape[0]):
 #%%
 categorical_data = X[categorical_cols]
 categorical_values = np.empty(categorical_data.shape, dtype='|S10')
-
-#%%
 for i in xrange(categorical_data.shape[0]):
     for j in xrange(categorical_data.shape[1]):
         categorical_values[i,j] = str(categorical_data.iloc[i,j])
@@ -235,7 +232,6 @@ X_train_zero_cat = np.hstack((X_train_real_zeros,X_train_cat_oh))
 X_test_zero_cat = np.hstack((X_test_real_zeros,X_test_cat_oh))
 X_train_mean_cat = np.hstack((X_train_real_mean,X_train_cat_oh))
 X_test_mean_cat = np.hstack((X_test_real_mean,X_test_cat_oh))
-#%%
 y_train_val = y_train.values
 y_test_val = y_test.values
 
@@ -248,7 +244,6 @@ from sklearn.metrics import roc_auc_score
 #%%
 optimizer_zero = LogisticRegression('l2')
 optimizer_mean = LogisticRegression('l2')
-print optimizer_mean.get_params().keys()
 #%%
 param_grid = {'C': [0.01, 0.05, 0.1, 0.5, 1, 5, 10]}
 cv = 3
@@ -300,7 +295,6 @@ def write_answer_1(auc_1, auc_2):
     auc = (auc_1 + auc_2)/2
     with open("..\..\Results\preprocessing_lr_answer1.txt", "w") as fout:
         fout.write(str(auc))
-#%%
 write_answer_1(mean_roc_auc,zero_roc_auc)
 # 6. Информация для интересующихся: вообще говоря, не вполне логично оптимизировать на кросс-валидации заданный
 #    по умолчанию в классе логистической регрессии функционал accuracy, а измерять на тесте AUC ROC, но это,
@@ -308,7 +302,6 @@ write_answer_1(mean_roc_auc,zero_roc_auc)
 
 #%%
 from pandas.tools.plotting import scatter_matrix
-
 data_numeric = pd.DataFrame(X_train_real_zeros, columns=numeric_cols)
 list_cols = ['Number.of.Successful.Grant.1', 'SEO.Percentage.2', 'Year.of.Birth.1']
 scatter_matrix(data_numeric[list_cols], alpha=0.5, figsize=(10, 10))
@@ -353,7 +346,6 @@ print "Scaled roc_auc:", scaled_roc_auc
 def write_answer_2(auc):
     with open("..\..\Results\preprocessing_lr_answer2.txt", "w") as fout:
         fout.write(str(auc))
-#%%
 write_answer_2(scaled_roc_auc)
 
 ## Балансировка классов.
@@ -364,32 +356,32 @@ write_answer_2(scaled_roc_auc)
 # построим на графиках объекты и области классификации.
 #%%
 np.random.seed(0)
-"""Сэмплируем данные из первой гауссианы"""
+# Сэмплируем данные из первой гауссианы
 data_0 = np.random.multivariate_normal([0,0], [[0.5,0],[0,0.5]], size=40)
-"""И из второй"""
+# И из второй
 data_1 = np.random.multivariate_normal([0,1], [[0.5,0],[0,0.5]], size=40)
-"""На обучение берём 20 объектов из первого класса и 10 из второго"""
+# На обучение берём 20 объектов из первого класса и 10 из второго
 example_data_train = np.vstack([data_0[:20,:], data_1[:10,:]])
 example_labels_train = np.concatenate([np.zeros((20)), np.ones((10))])
-"""На тест - 20 из первого и 30 из второго"""
+# На тест - 20 из первого и 30 из второго
 example_data_test = np.vstack([data_0[20:,:], data_1[10:,:]])
 example_labels_test = np.concatenate([np.zeros((20)), np.ones((30))])
-"""Задаём координатную сетку, на которой будем вычислять область классификации"""
+# Задаём координатную сетку, на которой будем вычислять область классификации
 xx, yy = np.meshgrid(np.arange(-3, 3, 0.02), np.arange(-3, 3, 0.02))
-"""Обучаем регрессию без балансировки по классам"""
+# Обучаем регрессию без балансировки по классам
 optimizer = GridSearchCV(LogisticRegression(), param_grid, cv=cv, n_jobs=-1)
 optimizer.fit(example_data_train, example_labels_train)
-"""Строим предсказания регрессии для сетки"""
+# Строим предсказания регрессии для сетки
 Z = optimizer.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
 plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
 plt.scatter(data_0[:,0], data_0[:,1], color='red')
 plt.scatter(data_1[:,0], data_1[:,1], color='blue')
-"""Считаем AUC"""
+# Считаем AUC
 auc_wo_class_weights = roc_auc_score(example_labels_test, optimizer.predict_proba(example_data_test)[:,1])
 plt.title('Without class weights')
 plt.show()
 print('AUC: %f'%auc_wo_class_weights)
-"""Для второй регрессии в LogisticRegression передаём параметр class_weight='balanced'"""
+# Для второй регрессии в LogisticRegression передаём параметр class_weight='balanced'
 optimizer = GridSearchCV(LogisticRegression(class_weight='balanced'), param_grid, cv=cv, n_jobs=-1)
 optimizer.fit(example_data_train, example_labels_train)
 Z = optimizer.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
@@ -415,7 +407,6 @@ print(np.sum(y_train_val==1))
 #%%
 balanced_optimizer = LogisticRegression('l2', class_weight='balanced')
 balanced_estimator = GridSearchCV(balanced_optimizer, param_grid, cv=cv)
-#%%
 balanced_estimator.fit(X_train_scaled_cat, y_train_val)
 best_balanced_optimizer = estimator_scaled.best_estimator_
 best_balanced_params = estimator_scaled.best_params_
@@ -436,10 +427,8 @@ y_train_ones = y_train_val[y_train_val == 1]
 len_y_train_ones = len(y_train_ones)
 np.random.seed(0)
 indices_to_add = np.random.randint(0, len_y_train_ones-1, len(y_train_val[y_train_val == 0])-len_y_train_ones)
-#%%
 X_train_to_add = X_train_scaled_cat[y_train_val == 1,:][indices_to_add,:]
 y_train_to_add = y_train_ones[indices_to_add]
-#%%
 X_train_balanced = np.concatenate((X_train_scaled_cat, X_train_to_add), axis=0)
 y_train_balanced = np.concatenate((y_train_val, y_train_to_add), axis=0)
 #%%
@@ -448,7 +437,6 @@ print(np.sum(y_train_balanced==1))
 #%%
 resampled_optimizer = LogisticRegression('l2')
 resampled_estimator = GridSearchCV(resampled_optimizer, param_grid, cv=cv)
-#%%
 resampled_estimator.fit(X_train_balanced, y_train_balanced)
 best_balanced_optimizer = estimator_scaled.best_estimator_
 best_balanced_params = estimator_scaled.best_params_
@@ -464,7 +452,6 @@ def write_answer_3(auc_1, auc_2):
     auc = (auc_1 + auc_2) / 2
     with open("..\..\Results\preprocessing_lr_answer3.txt", "w") as fout:
         fout.write(str(auc))
-#%%
 write_answer_3(balanced_roc_auc, resampled_roc_auc)
 
 ## Стратификация выборок.
@@ -552,5 +539,151 @@ print "Stratified roc_auc:", stratified_roc_auc
 def write_answer_4(auc):
     with open("..\..\Results\preprocessing_lr_answer4.txt", "w") as fout:
         fout.write(str(auc))
-#%%
 write_answer_4(stratified_roc_auc)
+
+# Теперь вы разобрались с основными этапами предобработки данных для линейных классификаторов.
+# Напомним основные этапы:
+#   # обработка пропущенных значений
+#   # обработка категориальных признаков
+#   # стратификация
+#   # балансировка классов
+#   # масштабирование
+
+# Данные действия с данными рекомендуется проводить всякий раз, когда вы планируете использовать линейные
+# методы. Рекомендация по выполнению многих из этих пунктов справедлива и для других методов машинного
+# обучения.
+
+## Трансформация признаков.
+# Теперь рассмотрим способы преобразования признаков. Существует достаточно много различных способов
+# трансформации признаков, которые позволяют при помощи линейных методов получать более сложные разделяющие
+# поверхности. Самым базовым является полиномиальное преобразование признаков. Его идея заключается в том, что
+# помимо самих признаков вы дополнительно включаете в набор все полиномы степени p, которые можно из них
+# построить. Для случая p=2 преобразование выглядит следующим образом:
+# ϕ(xi)=[xi1^2,...,xiD^2,xi1xi2,...,xiDxiD−1,xi1,...,xiD,1]
+# Рассмотрим принцип работы данных признаков на данных, сэмплированных из гауссиан:
+
+#%%
+from sklearn.preprocessing import PolynomialFeatures
+#%%
+# Инициализируем класс, который выполняет преобразование
+transform = PolynomialFeatures(2)
+# Обучаем преобразование на обучающей выборке, применяем его к тестовой
+example_data_train_poly = transform.fit_transform(example_data_train)
+example_data_test_poly = transform.transform(example_data_test)
+# Обращаем внимание на параметр fit_intercept=False
+optimizer = GridSearchCV(LogisticRegression(class_weight='balanced',
+                                            fit_intercept=False),
+                         param_grid,
+                         cv=cv,
+                         n_jobs=-1)
+optimizer.fit(example_data_train_poly, example_labels_train)
+Z = optimizer.predict(transform.transform(np.c_[xx.ravel(), yy.ravel()])).reshape(xx.shape)
+plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
+plt.scatter(data_0[:,0], data_0[:,1], color='red')
+plt.scatter(data_1[:,0], data_1[:,1], color='blue')
+plt.title('With class weights')
+plt.show()
+
+# Видно, что данный метод преобразования данных уже позволяет строить нелинейные разделяющие поверхности,
+# которые могут более тонко подстраиваться под данные и находить более сложные зависимости. Число признаков
+# в новой модели:
+#%%
+print(example_data_train.shape)
+# Но при этом одновременно данный метод способствует более сильной способности модели к переобучению из-за
+# быстрого роста числа признаком с увеличением степени p. Рассмотрим пример с p=11:
+#%%
+transform = PolynomialFeatures(11)
+example_data_train_poly = transform.fit_transform(example_data_train)
+example_data_test_poly = transform.transform(example_data_test)
+optimizer = GridSearchCV(LogisticRegression(class_weight='balanced', fit_intercept=False), param_grid, cv=cv, n_jobs=-1)
+optimizer.fit(example_data_train_poly, example_labels_train)
+Z = optimizer.predict(transform.transform(np.c_[xx.ravel(), yy.ravel()])).reshape(xx.shape)
+plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
+plt.scatter(data_0[:,0], data_0[:,1], color='red')
+plt.scatter(data_1[:,0], data_1[:,1], color='blue')
+plt.title('Corrected class weights')
+plt.show()
+# Количество признаков в данной модели:
+#%%
+print(example_data_train_poly.shape)
+
+## Задание 5. Трансформация вещественных признаков.
+# 1. Реализуйте по аналогии с примером преобразование вещественных признаков модели при помощи полиномиальных
+#    признаков степени 2
+#%%
+poly_transform = PolynomialFeatures(2)
+X_train_real_poly = poly_transform.fit_transform(X_train_real_stratified)
+X_test_real_poly = poly_transform.transform(X_test_real_stratified)
+# 2. Постройте логистическую регрессию на новых данных, одновременно подобрав оптимальные гиперпараметры.
+#    Обращаем внимание, что в преобразованных признаках уже присутствует столбец, все значения которого
+#    равны 1, поэтому обучать дополнительно значение b не нужно, его функцию выполняет один из весов w.
+#    В связи с этим во избежание линейной зависимости в датасете, в вызов класса логистической регрессии
+#    требуется передавать параметр fit_intercept=False. Для обучения используйте стратифицированные выборки с
+#    балансировкой классов при помощи весов, преобразованные признаки требуется заново отмасштабировать.
+#%%
+scaler = StandardScaler()
+scaler.fit(X_train_real_poly)
+X_train_poly_scaled = scaler.transform(X_train_real_poly)
+X_test_poly_scaled = scaler.transform(X_test_real_poly)
+X_train_poly = np.hstack((X_train_poly_scaled,X_train_cat_stratified))
+X_test_poly = np.hstack((X_test_poly_scaled,X_test_cat_stratified))
+poly_optimizer = LogisticRegression('l2', class_weight='balanced', fit_intercept=False)
+poly_estimator = GridSearchCV(poly_optimizer, param_grid, cv=cv)
+#%%
+poly_estimator.fit(X_train_poly, y_train_stratified)
+best_stratified_optimizer = estimator_stratified.best_estimator_
+best_stratified_params = estimator_stratified.best_params_
+best_stratified_params
+# 3. Получите AUC ROC на тесте и сравните данный результат с использованием обычных признаков.
+#%%
+poly_roc_auc = roc_auc_score(y_test_stratified,
+                             poly_estimator.predict_proba(X_test_poly)[:,1])
+print "Polynomial roc_auc:", poly_roc_auc
+# 4. Передайте полученный ответ в функцию write_answer_5.
+#%%
+def write_answer_5(auc):
+    with open("..\..\Results\preprocessing_lr_answer5.txt", "w") as fout:
+        fout.write(str(auc))
+write_answer_5(poly_roc_auc)
+
+## Регрессия Lasso.
+# К логистической регрессии также можно применить L1-регуляризацию (Lasso), вместо регуляризации L2, которая
+# будет приводить к отбору признаков. Вам предлагается применить L1-регуляцию к исходным признакам и
+# проинтерпретировать полученные результаты (применение отбора признаков к полиномиальным так же можно успешно
+# применять, но в нём уже будет отсутствовать компонента интерпретации, т.к. смысловое значение оригинальных
+# признаков известно, а полиномиальных - уже может быть достаточно нетривиально). Для вызова логистической
+# регрессии с L1-регуляризацией достаточно передать параметр penalty='l1' в инициализацию класса.
+
+## Задание 6. Отбор признаков при помощи регрессии Lasso.
+# 1. Обучите регрессию Lasso на стратифицированных отмасштабированных выборках, используя балансировку классов
+#    при помощи весов.
+#%%
+lasso_optimizer = LogisticRegression('l1', class_weight='balanced')
+lasso_estimator = GridSearchCV(lasso_optimizer, param_grid, cv=cv)
+lasso_estimator.fit(X_train_stratified, y_train_stratified)
+best_lasso_optimizer = lasso_estimator.best_estimator_
+best_lasso_params = lasso_estimator.best_params_
+best_lasso_params
+# 2. Получите ROC AUC регрессии, сравните его с предыдущими результатами.
+#%%
+lasso_roc_auc = roc_auc_score(y_test_stratified,
+                              lasso_estimator.predict_proba(X_test_stratified)[:,1])
+print "Lasso roc_auc:", lasso_roc_auc
+# 3. Найдите номера вещественных признаков, которые имеют нулевые веса в итоговой модели.
+#%%
+real_coefs = best_lasso_optimizer.coef_[0,:len(X_train_real_stratified[0])]
+real_coefs
+#%%
+zero_coef_indices = []
+i = 0
+for c in (real_coefs==0.):
+    if c:
+        zero_coef_indices.append(i)
+    i+=1
+zero_coef_indices
+# 4. Передайте их список функции write_answer_6.
+#%%
+def write_answer_6(features):
+    with open("..\..\Results\preprocessing_lr_answer6.txt", "w") as fout:
+        fout.write(" ".join([str(num) for num in features]))
+write_answer_6(zero_coef_indices)
