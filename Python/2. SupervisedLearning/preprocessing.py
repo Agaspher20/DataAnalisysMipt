@@ -115,10 +115,6 @@ for i in xrange(numeric_data.shape[0]):
         X_real_mean[i,j] = numeric_means[j] if np.isnan(numeric_value) else numeric_value
 
 #%%
-X_real_zeros = pd.DataFrame(X_real_zeros, columns=numeric_data.columns)
-X_real_mean = pd.DataFrame(X_real_mean, columns=numeric_data.columns)
-
-#%%
 categorical_data = X[categorical_cols]
 categorical_values = np.empty(categorical_data.shape, dtype='|S10')
 
@@ -126,12 +122,7 @@ categorical_values = np.empty(categorical_data.shape, dtype='|S10')
 for i in xrange(categorical_data.shape[0]):
     for j in xrange(categorical_data.shape[1]):
         categorical_values[i,j] = str(categorical_data.iloc[i,j])
-
-#%%
-categorical_data = pd.DataFrame(categorical_values, columns=categorical_data.columns)
-
-#%%
-categorical_data.head(2)
+categorical_data_filled = pd.DataFrame(categorical_values)
 
 ## Преобразование категориальных признаков.
 # В предыдущей ячейке мы разделили наш датасет ещё на две части: в одной присутствуют только вещественные
@@ -154,7 +145,6 @@ encoder = DV(sparse = False)
 encoded_data = encoder.fit_transform(categorial_data.T.to_dict().values())
 print('\nЗакодированные данные:\n')
 print(encoded_data)
-
 # Как видно, в первые три колонки оказалась закодированна информация о стране, а во вторые две - о поле.
 # При этом для совпадающих элементов выборки строки будут полностью совпадать. Также из примера видно,
 # что кодирование признаков сильно увеличивает их количество, но полностью сохраняет информацию, в том числе
@@ -177,8 +167,7 @@ print(encoded_data)
 
 #%%
 encoder = DV(sparse = False)
-X_cat_oh = encoder.fit_transform(categorical_data.T.to_dict().values())
-X_cat_oh = pd.DataFrame(X_cat_oh)
+X_cat_oh = encoder.fit_transform(categorical_data_filled.T.to_dict().values())
 
 # Для построения метрики качества по результату обучения требуется разделить исходный датасет на обучающую
 # и тестовую выборки.
@@ -246,6 +235,9 @@ X_train_zero_cat = np.hstack((X_train_real_zeros,X_train_cat_oh))
 X_test_zero_cat = np.hstack((X_test_real_zeros,X_test_cat_oh))
 X_train_mean_cat = np.hstack((X_train_real_mean,X_train_cat_oh))
 X_test_mean_cat = np.hstack((X_test_real_mean,X_test_cat_oh))
+#%%
+y_train_val = y_train.values
+y_test_val = y_test.values
 
 # 2. Обучите на них логистическую регрессию, подбирая параметры из заданной сетки param_grid по методу
 #    кросс-валидации с числом фолдов cv=3. В качестве оптимизируемой функции используйте заданную по умолчанию.
@@ -263,12 +255,12 @@ cv = 3
 estimator_zero = GridSearchCV(optimizer_zero, param_grid, cv=cv)
 estimator_mean = GridSearchCV(optimizer_mean, param_grid, cv=cv)
 #%%
-estimator_zero.fit(X_train_zero_cat, y_train)
+estimator_zero.fit(X_train_zero_cat, y_train_val)
 best_zero_optimizer = estimator_zero.best_estimator_
 best_zero_params = estimator_zero.best_params_
 best_zero_params
 #%%
-estimator_mean.fit(X_train_mean_cat, y_train)
+estimator_mean.fit(X_train_mean_cat, y_train_val)
 best_mean_optimizer = estimator_mean.best_estimator_
 best_mean_params = estimator_mean.best_params_
 best_mean_params
@@ -296,8 +288,8 @@ plot_scores(estimator_mean)
 #    заполнения пропущенных вещественных значений работает лучше? В дальнейшем для выполнения задания в
 #    качестве вещественных признаков используйте ту выборку, которая даёт лучшее качество на тесте.
 #%%
-zero_roc_auc = roc_auc_score(y_test, estimator_zero.predict_proba(X_test_zero_cat)[:,1])
-mean_roc_auc = roc_auc_score(y_test, estimator_mean.predict_proba(X_test_mean_cat)[:,1])
+zero_roc_auc = roc_auc_score(y_test_val, estimator_zero.predict_proba(X_test_zero_cat)[:,1])
+mean_roc_auc = roc_auc_score(y_test_val, estimator_mean.predict_proba(X_test_mean_cat)[:,1])
 print "Zero roc_auc:", zero_roc_auc
 print "Mean roc_auc:", mean_roc_auc
 print "Best algorithm: ", "Zero" if zero_roc_auc > mean_roc_auc else "Mean"
@@ -344,7 +336,7 @@ X_test_scaled_cat = np.hstack((X_test_real_zeros,X_test_cat_oh))
 optimizer_scaled = LogisticRegression('l2')
 estimator_scaled = GridSearchCV(optimizer_scaled, param_grid, cv=cv)
 #%%
-estimator_scaled.fit(X_train_scaled_cat, y_train)
+estimator_scaled.fit(X_train_scaled_cat, y_train_val)
 best_scaled_optimizer = estimator_scaled.best_estimator_
 best_scaled_params = estimator_scaled.best_params_
 best_scaled_params
@@ -354,7 +346,7 @@ print "scaled"
 plot_scores(estimator_scaled)
 # 3. Получите значение ROC AUC на тестовой выборке, сравните с лучшим результатом, полученными ранее.
 #%%
-scaled_roc_auc = roc_auc_score(y_test, estimator_scaled.predict_proba(X_test_scaled_cat)[:,1])
+scaled_roc_auc = roc_auc_score(y_test_val, estimator_scaled.predict_proba(X_test_scaled_cat)[:,1])
 print "Scaled roc_auc:", scaled_roc_auc
 # 4. Запишите полученный ответ в файл при помощи функции write_answer_2.
 #%%
@@ -415,8 +407,8 @@ print('AUC: %f'%auc_w_class_weights)
 # выборке всегда следует обращать внимание.
 # Посмотрим, сбалансированны ли классы в нашей обучающей выборке:
 #%%
-print(np.sum(y_train==0))
-print(np.sum(y_train==1))
+print(np.sum(y_train_val==0))
+print(np.sum(y_train_val==1))
 
 ## Задание 3. Балансировка классов.
 # 1. Обучите логистическую регрессию и гиперпараметры с балансировкой классов, используя веса
@@ -426,33 +418,54 @@ print(np.sum(y_train==1))
 balanced_optimizer = LogisticRegression('l2', class_weight='balanced')
 balanced_estimator = GridSearchCV(balanced_optimizer, param_grid, cv=cv)
 #%%
-balanced_estimator.fit(X_train_scaled_cat, y_train)
+balanced_estimator.fit(X_train_scaled_cat, y_train_val)
 best_balanced_optimizer = estimator_scaled.best_estimator_
 best_balanced_params = estimator_scaled.best_params_
 best_balanced_params
 # 2. Получите метрику ROC AUC на тестовой выборке.
 #%%
-balanced_roc_auc = roc_auc_score(y_test, balanced_estimator.predict_proba(X_test_scaled_cat)[:,1])
-print "Scaled roc_auc:", balanced_roc_auc
+balanced_roc_auc = roc_auc_score(y_test_val, balanced_estimator.predict_proba(X_test_scaled_cat)[:,1])
+print "Balanced roc_auc:", balanced_roc_auc
 # 3. Сбалансируйте выборку, досэмплировав в неё объекты из меньшего класса. Для получения индексов
 #    объектов, которые требуется добавить в обучающую выборку, используйте следующую комбинацию
 #    вызовов функций:
 #       np.random.seed(0)
 #       indices_to_add = np.random.randint(...)
-#       X_train_to_add = X_train[y_train.as_matrix() == 1,:][indices_to_add,:]
+#       X_train_to_add = X_train[y_train_val.as_matrix() == 1,:][indices_to_add,:]
 #    После этого добавьте эти объекты в начало или конец обучающей выборки. Дополните соответствующим
 #    образом вектор ответов.
 #%%
-y_train.
-#%%
-((y_train.as_matrix() == 1)[1],y_train[1])
-#%%
-zeros_count = np.sum(y_train==0)
-ones_count = np.sum(y_train==1)
+y_train_ones = y_train_val[y_train_val == 1]
+len_y_train_ones = len(y_train_ones)
 np.random.seed(0)
-
-indices_to_add = np.random.randint(0, len(y_train), zeros_count-ones_count)
+indices_to_add = np.random.randint(0, len_y_train_ones-1, len(y_train_val[y_train_val == 0])-len_y_train_ones)
+#%%
+X_train_to_add = X_train_scaled_cat[y_train_val == 1,:][indices_to_add,:]
+y_train_to_add = y_train_ones[indices_to_add]
+#%%
+X_train_balanced = np.concatenate((X_train_scaled_cat, X_train_to_add), axis=0)
+y_train_balanced = np.concatenate((y_train_val, y_train_to_add), axis=0)
+#%%
+print(np.sum(y_train_balanced==0))
+print(np.sum(y_train_balanced==1))
+#%%
+resampled_optimizer = LogisticRegression('l2')
+resampled_estimator = GridSearchCV(resampled_optimizer, param_grid, cv=cv)
+#%%
+resampled_estimator.fit(X_train_balanced, y_train_balanced)
+best_balanced_optimizer = estimator_scaled.best_estimator_
+best_balanced_params = estimator_scaled.best_params_
+best_balanced_params
 # 4. Получите метрику ROC AUC на тестовой выборке, сравните с предыдущим результатом.
+#%%
+resampled_roc_auc = roc_auc_score(y_test_val, resampled_estimator.predict_proba(X_test_scaled_cat)[:,1])
+print "Resampled roc_auc:", balanced_roc_auc
 # 5. Внесите ответы в выходной файл при помощи функции write_asnwer_3, передав в неё сначала
 #    ROC AUC для балансировки весами, а потом балансировки выборки вручную.
 #%%
+def write_answer_3(auc_1, auc_2):
+    auc = (auc_1 + auc_2) / 2
+    with open("..\..\Results\preprocessing_lr_answer3.txt", "w") as fout:
+        fout.write(str(auc))
+#%%
+write_answer_3(balanced_roc_auc, resampled_roc_auc)
