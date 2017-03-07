@@ -329,7 +329,7 @@ plt.show()
 
 ## Задание 2
 # 1. Обучите ещё раз регрессию и гиперпараметры на новых признаках, объединив их с закодированными
-#    категориальными.
+# категориальными.
 #%%
 X_train_scaled_cat = np.hstack((X_train_real_scaled,X_train_cat_oh))
 X_test_scaled_cat = np.hstack((X_test_real_scaled,X_test_cat_oh))
@@ -357,12 +357,11 @@ def write_answer_2(auc):
 write_answer_2(scaled_roc_auc)
 
 ## Балансировка классов.
-# Алгоритмы классификации могут быть очень чувствительны к несбалансированным классам.
-# Рассмотрим пример с выборками, сэмплированными из двух гауссиан. Их мат. ожидания и
-# матрицы ковариации заданы так, что истинная разделяющая поверхность должна проходить
-# параллельно оси x. Поместим в обучающую выборку 20 объектов, сэмплированных из 1-й
-# гауссианы, и 10 объектов из 2-й. После этого обучим на них линейную регрессию, и построим
-# на графиках объекты и области классификации.
+# Алгоритмы классификации могут быть очень чувствительны к несбалансированным классам. Рассмотрим пример с
+# выборками, сэмплированными из двух гауссиан. Их мат. ожидания и матрицы ковариации заданы так, что истинная
+# разделяющая поверхность должна проходить параллельно оси x. Поместим в обучающую выборку 20 объектов,
+# сэмплированных из 1-й гауссианы, и 10 объектов из 2-й. После этого обучим на них линейную регрессию, и
+# построим на графиках объекты и области классификации.
 #%%
 np.random.seed(0)
 """Сэмплируем данные из первой гауссианы"""
@@ -402,18 +401,17 @@ plt.title('With class weights')
 plt.show()
 print('AUC: %f'%auc_w_class_weights)
 
-#Как видно, во втором случае классификатор находит разделяющую поверхность, которая ближе
-# к истинной, т.е. меньше переобучается. Поэтому на сбалансированность классов в обучающей
-# выборке всегда следует обращать внимание.
-# Посмотрим, сбалансированны ли классы в нашей обучающей выборке:
+# Как видно, во втором случае классификатор находит разделяющую поверхность, которая ближе к истинной, т.е.
+# меньше переобучается. Поэтому на сбалансированность классов в обучающей выборке всегда следует обращать
+# внимание. Посмотрим, сбалансированны ли классы в нашей обучающей выборке:
 #%%
 print(np.sum(y_train_val==0))
 print(np.sum(y_train_val==1))
 
 ## Задание 3. Балансировка классов.
 # 1. Обучите логистическую регрессию и гиперпараметры с балансировкой классов, используя веса
-#    (параметр class_weight='balanced' регрессии) на отмасштабированных выборках, полученных
-#    в предыдущем задании. Убедитесь, что вы нашли максимум accuracy по гиперпараметрам.
+#    (параметр class_weight='balanced' регрессии) на отмасштабированных выборках, полученных в предыдущем
+#    задании. Убедитесь, что вы нашли максимум accuracy по гиперпараметрам.
 #%%
 balanced_optimizer = LogisticRegression('l2', class_weight='balanced')
 balanced_estimator = GridSearchCV(balanced_optimizer, param_grid, cv=cv)
@@ -426,14 +424,13 @@ best_balanced_params
 #%%
 balanced_roc_auc = roc_auc_score(y_test_val, balanced_estimator.predict_proba(X_test_scaled_cat)[:,1])
 print "Balanced roc_auc:", balanced_roc_auc
-# 3. Сбалансируйте выборку, досэмплировав в неё объекты из меньшего класса. Для получения индексов
-#    объектов, которые требуется добавить в обучающую выборку, используйте следующую комбинацию
-#    вызовов функций:
+# 3. Сбалансируйте выборку, досэмплировав в неё объекты из меньшего класса. Для получения индексов объектов,
+#    которые требуется добавить в обучающую выборку, используйте следующую комбинацию вызовов функций:
 #       np.random.seed(0)
 #       indices_to_add = np.random.randint(...)
 #       X_train_to_add = X_train[y_train_val.as_matrix() == 1,:][indices_to_add,:]
-#    После этого добавьте эти объекты в начало или конец обучающей выборки. Дополните соответствующим
-#    образом вектор ответов.
+#    После этого добавьте эти объекты в начало или конец обучающей выборки. Дополните соответствующим образом
+#    вектор ответов.
 #%%
 y_train_ones = y_train_val[y_train_val == 1]
 len_y_train_ones = len(y_train_ones)
@@ -469,3 +466,91 @@ def write_answer_3(auc_1, auc_2):
         fout.write(str(auc))
 #%%
 write_answer_3(balanced_roc_auc, resampled_roc_auc)
+
+## Стратификация выборок.
+# Рассмотрим ещё раз пример с выборками из нормальных распределений. Посмотрим ещё раз на качество
+# классификаторов, получаемое на тестовых выборках:
+#%%
+print 'AUC ROC for classifier without weighted classes', auc_wo_class_weights
+print 'AUC ROC for classifier with weighted classes: ', auc_w_class_weights
+
+# Насколько эти цифры реально отражают качество работы алгоритма, если учесть, что тестовая выборка так же
+# несбалансирована, как обучающая? При этом мы уже знаем, что алгоритм логистический регрессии чувствителен к
+# балансировке классов в обучающей выборке, т.е. в данном случае на тесте он будет давать заведомо заниженные
+# результаты. Метрика классификатора на тесте имела бы гораздо больший смысл, если бы объекты были разделены в
+# выборках поровну: по 20 из каждого класса на обучени и на тесте. Переформируем выборки и подсчитаем новые
+# ошибки:
+#%%
+# Разделим данные по классам поровну между обучающей и тестовой выборками
+example_data_train = np.vstack([data_0[:20,:], data_1[:20,:]])
+example_labels_train = np.concatenate([np.zeros((20)), np.ones((20))])
+example_data_test = np.vstack([data_0[20:,:], data_1[20:,:]])
+example_labels_test = np.concatenate([np.zeros((20)), np.ones((20))])
+# Обучим классификатор
+optimizer = GridSearchCV(LogisticRegression(class_weight='balanced'), param_grid, cv=cv, n_jobs=-1)
+optimizer.fit(example_data_train, example_labels_train)
+Z = optimizer.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Pastel2)
+plt.scatter(data_0[:,0], data_0[:,1], color='red')
+plt.scatter(data_1[:,0], data_1[:,1], color='blue')
+auc_stratified = roc_auc_score(example_labels_test, optimizer.predict_proba(example_data_test)[:,1])
+plt.title('With class weights')
+plt.show()
+print('AUC ROC for stratified samples: ', auc_stratified)
+# Как видно, после данной процедуры ответ классификатора изменился незначительно, а вот качество увеличилось.
+# При этом, в зависимости от того, как вы разбили изначально данные на обучение и тест, после сбалансированного
+# разделения выборок итоговая метрика на тесте может как увеличиться, так и уменьшиться, но доверять ей можно
+# значительно больше, т.к. она построена с учётом специфики работы классификатора. Данный подход является
+# частным случаем т.н. метода стратификации.
+
+## Задание 4. Стратификация выборки.
+# 1. По аналогии с тем, как это было сделано в начале задания, разбейте выборки X_real_zeros и X_cat_oh на
+#    обучение и тест, передавая в функцию
+#       train_test_split(...)
+#    дополнительно параметр
+#       stratify=y
+# Также обязательно передайте в функцию переменную random_state=0.
+#%%
+(X_train_real_stratified, 
+ X_test_real_stratified, 
+ y_train_stratified_series, y_test_stratified_series) = train_test_split(X_real_zeros, y,
+                                                           test_size=0.3, 
+                                                           random_state=0,
+                                                           stratify=y)
+(X_train_cat_stratified,
+ X_test_cat_stratified) = train_test_split(X_cat_oh, 
+                                           test_size=0.3, 
+                                           random_state=0,
+                                           stratify=y)
+
+y_train_stratified = y_train_stratified_series.values
+y_test_stratified = y_test_stratified_series.values
+# 2. Выполните масштабирование новых вещественных выборок, обучите классификатор и его гиперпараметры при
+#    помощи метода кросс-валидации, делая поправку на несбалансированные классы при помощи весов. Убедитесь в
+#    том, что нашли оптимум accuracy по гиперпараметрам.
+#%%
+scaler = StandardScaler()
+scaler.fit(X_train_real_stratified)
+X_train_strat_scaled = scaler.transform(X_train_real_stratified)
+X_test_strat_scaled = scaler.transform(X_test_real_stratified)
+X_train_stratified = np.hstack((X_train_strat_scaled,X_train_cat_stratified))
+X_test_stratified = np.hstack((X_test_strat_scaled,X_test_cat_stratified))
+optimizer_stratified = LogisticRegression('l2', class_weight='balanced')
+estimator_stratified = GridSearchCV(optimizer_stratified, param_grid, cv=cv)
+#%%
+estimator_stratified.fit(X_train_stratified, y_train_stratified)
+best_stratified_optimizer = estimator_stratified.best_estimator_
+best_stratified_params = estimator_stratified.best_params_
+best_stratified_params
+# 3. Оцените качество классификатора метрике AUC ROC на тестовой выборке.
+#%%
+stratified_roc_auc = roc_auc_score(y_test_stratified,
+                                   estimator_stratified.predict_proba(X_test_stratified)[:,1])
+print "Stratified roc_auc:", stratified_roc_auc
+# 4. Полученный ответ передайте функции write_answer_4
+#%%
+def write_answer_4(auc):
+    with open("..\..\Results\preprocessing_lr_answer4.txt", "w") as fout:
+        fout.write(str(auc))
+#%%
+write_answer_4(stratified_roc_auc)
