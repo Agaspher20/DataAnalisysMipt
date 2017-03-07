@@ -331,8 +331,8 @@ plt.show()
 # 1. Обучите ещё раз регрессию и гиперпараметры на новых признаках, объединив их с закодированными
 #    категориальными.
 #%%
-X_train_scaled_cat = np.hstack((X_train_real_zeros,X_train_cat_oh))
-X_test_scaled_cat = np.hstack((X_test_real_zeros,X_test_cat_oh))
+X_train_scaled_cat = np.hstack((X_train_real_scaled,X_train_cat_oh))
+X_test_scaled_cat = np.hstack((X_test_real_scaled,X_test_cat_oh))
 optimizer_scaled = LogisticRegression('l2')
 estimator_scaled = GridSearchCV(optimizer_scaled, param_grid, cv=cv)
 #%%
@@ -459,7 +459,7 @@ best_balanced_params
 # 4. Получите метрику ROC AUC на тестовой выборке, сравните с предыдущим результатом.
 #%%
 resampled_roc_auc = roc_auc_score(y_test_val, resampled_estimator.predict_proba(X_test_scaled_cat)[:,1])
-print "Resampled roc_auc:", balanced_roc_auc
+print "Resampled roc_auc:", resampled_roc_auc
 # 5. Внесите ответы в выходной файл при помощи функции write_asnwer_3, передав в неё сначала
 #    ROC AUC для балансировки весами, а потом балансировки выборки вручную.
 #%%
