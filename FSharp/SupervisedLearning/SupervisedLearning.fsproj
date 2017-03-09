@@ -58,6 +58,7 @@
     <Content Include="packages.config" />
     <None Include="Overfitting.fsx" />
     <None Include="Metrics.fsx" />
+    <None Include="Preprocessing.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Accord">
