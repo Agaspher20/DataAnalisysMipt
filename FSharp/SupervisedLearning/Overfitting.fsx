@@ -79,11 +79,10 @@ let transposedData = Matrix.Transpose<float>(dataMatrix)
                  ||> Seq.zip
                  |> Chart.Point
                  |> titleX title
-                 |> hideXLabels
-                 |> hideYLabels
+                 |> xLabelsFontSize 6.
         match idx with
-        | 0 -> ch |> titleY "Cnt"
-        | _ -> ch
+        | 0 -> ch |> titleY "Cnt" |> yLabelsFontSize 6.
+        | _ -> ch |> yLabelsFontSize 0.1
     )
     |> Chart.Columns)
 |> Chart.Rows

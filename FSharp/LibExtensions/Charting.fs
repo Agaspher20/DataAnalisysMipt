@@ -21,10 +21,10 @@ module Charting =
     let namedAs name (chart:ChartTypes.GenericChart) =
         chart.WithStyling(Name=name)
     let withTitle title (chart:ChartTypes.GenericChart) = chart.WithTitle title
-    let hideXLabels (chart:ChartTypes.GenericChart) =
-        chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
-    let hideYLabels (chart:ChartTypes.GenericChart) =
-        chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=0.01))
+    let xLabelsFontSize fontSize (chart:ChartTypes.GenericChart) =
+        chart.WithXAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=fontSize))
+    let yLabelsFontSize fontSize (chart:ChartTypes.GenericChart) =
+        chart.WithYAxis(LabelStyle=ChartTypes.LabelStyle(FontSize=fontSize))
 
     let pairPlot (titles:string[]) (data:seq<float>[]) =
         if titles.Length <> data.Length
@@ -55,6 +55,6 @@ module Charting =
                                | _ -> match i with
                                       | idx when idx = lastRowIndex -> ch |> titleX tj |> withoutYAxis
                                       | _ -> ch |> withoutXAxis |> withoutYAxis
-                titledCh |> hideXLabels |> hideYLabels)
+                titledCh |> xLabelsFontSize 0.01 |> yLabelsFontSize 0.01)
             |> Chart.Columns)
         |> Chart.Rows
