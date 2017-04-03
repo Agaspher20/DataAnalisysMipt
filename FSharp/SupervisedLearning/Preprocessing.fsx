@@ -12,6 +12,8 @@ open Accord
 open Accord.Math
 open Accord.MachineLearning
 open Accord.Statistics.Filters
+open Accord.Statistics.Models.Regression
+open Accord.Statistics.Models.Regression.Fitting
 
 open FSharp.Data
 open FSharp.Charting
@@ -126,16 +128,6 @@ dataSet.Rows
 let numericData = dataSet.Rows
                   |> Seq.map getNumericValues
 let numericMeans = numericData |> calculateMeans
-let categoricalData = dataSet.Rows
-                      |> Seq.map (getCategoricalValues
-                                  >> (fun row ->
-                                      row
-                                      |> Array.map (fun str ->
-                                        match str with
-                                        | null -> "<ItIsNull>"
-                                        | "" -> "<empty>"
-                                        | _ -> str)))
-                      |> transformCategoricalValues
 let mapRowValues (data:float[] seq) mapper =
     data
     |> Seq.map (fun values ->
@@ -143,8 +135,60 @@ let mapRowValues (data:float[] seq) mapper =
         |> Array.mapi(fun i x -> match x with
                                  | v when nan.Equals(v) -> v |> mapper i
                                  | v -> v))
-
+    |> Seq.toArray
 let mapNumericData = mapRowValues numericData
-
 let xRealZeros = mapNumericData (fun i v -> 0.)
 let xRealMean = mapNumericData (fun i v -> numericMeans.[i])
+let xCategoricalData = dataSet.Rows
+                      |> Seq.map (getCategoricalValues
+                                  >> (fun row ->
+                                      row
+                                      |> Array.map (fun str ->
+                                        match str with
+                                        | null -> "<null>"
+                                        | "" -> "<empty>"
+                                        | _ -> str)))
+                      |> transformCategoricalValues
+let y = dataSet.Rows
+        |> Seq.map (fun row -> row.``Grant.Status``)
+        |> Seq.toArray
+
+let crossVal = CrossValidation<float[]>(y |> Array.length)
+crossVal.Fitting <- CrossValidationFittingFunction<float[]>((fun k indicesTrain indicesValidation ->
+    let trainRealMean = xRealMean.Get(indicesTrain)
+    let trainRealZero = xRealZeros.Get(indicesTrain)
+    let trainCategorical = xCategoricalData.Get(indicesTrain)
+    let trainY = y.Get(indicesTrain)
+
+    let validationRealMean = xRealMean.Get(indicesValidation)
+    let validationRealZero = xRealZeros.Get(indicesValidation)
+    let validationCategorical = xCategoricalData.Get(indicesValidation)
+    let validationY = y.Get(indicesValidation)
+
+    let trainZeroCat = 
+        (trainRealZero, trainCategorical)
+        ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
+    let validationZeroCat =
+        (validationRealZero, validationCategorical)
+        ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
+
+    let learner = new IterativeReweightedLeastSquares<LogisticRegression>()
+    learner.Tolerance <- 1e-4
+    learner.Iterations <- 100
+    learner.Regularization <- 0.
+
+    let regression = learner.Learn(trainZeroCat, trainY)
+    let calcError (inputs:float[][]) outputs =
+        let errSum =
+            (inputs, outputs)
+            ||> Array.map2 (fun input output ->
+                                match regression.Decide(input)=output with
+                                | true -> 1.
+                                | false -> 0.)
+            |> Array.sum
+        errSum/(outputs |> Array.length |> float)
+    // todo: GridSearch
+    // todo: LogisticRegressionAnalysis 
+    CrossValidationValues<float[]>(
+        calcError trainZeroCat trainY,
+        calcError validationZeroCat validationY)))
