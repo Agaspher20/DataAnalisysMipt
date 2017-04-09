@@ -1,5 +1,6 @@
 ﻿#r @"..\packages\Accord.3.4.0\lib\net46\Accord.dll"
 #r @"..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.dll"
+#r @"..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.Core.dll"
 #r @"..\packages\Accord.MachineLearning.3.4.0\lib\net46\Accord.MachineLearning.dll"
 #r @"..\packages\Accord.Statistics.3.4.0\lib\net46\Accord.Statistics.dll"
 #r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll"
@@ -153,24 +154,21 @@ let y = dataSet.Rows
         |> Seq.map (fun row -> row.``Grant.Status``)
         |> Seq.toArray
 
+let zeroCat = 
+    (xRealZeros, xCategoricalData)
+    ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
+
+let meanCat =
+    (xRealMean, xCategoricalData)
+    ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
+
 let crossVal = CrossValidation<float[]>(y |> Array.length)
 crossVal.Fitting <- CrossValidationFittingFunction<float[]>((fun k indicesTrain indicesValidation ->
-    let trainRealMean = xRealMean.Get(indicesTrain)
-    let trainRealZero = xRealZeros.Get(indicesTrain)
-    let trainCategorical = xCategoricalData.Get(indicesTrain)
     let trainY = y.Get(indicesTrain)
-
-    let validationRealMean = xRealMean.Get(indicesValidation)
-    let validationRealZero = xRealZeros.Get(indicesValidation)
-    let validationCategorical = xCategoricalData.Get(indicesValidation)
     let validationY = y.Get(indicesValidation)
 
-    let trainZeroCat = 
-        (trainRealZero, trainCategorical)
-        ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
-    let validationZeroCat =
-        (validationRealZero, validationCategorical)
-        ||> Array.map2 (fun r c -> (r,c) ||> Array.append)
+    let trainZeroCat = zeroCat.Get(indicesTrain)
+    let validationZeroCat = zeroCat.Get(indicesValidation)
 
     let learner = new IterativeReweightedLeastSquares<LogisticRegression>()
     learner.Tolerance <- 1e-4
@@ -192,3 +190,7 @@ crossVal.Fitting <- CrossValidationFittingFunction<float[]>((fun k indicesTrain 
     CrossValidationValues<float[]>(
         calcError trainZeroCat trainY,
         calcError validationZeroCat validationY)))
+
+let res = crossVal.Compute()
+
+printfn "%A" (res.Training.Values.ArgMin(),res.Validation.Values.ArgMin())
