@@ -5,3 +5,4 @@ bin/
 obj/
 .vscode/
 kernel-*.json
+Data/visualization_train.csv
