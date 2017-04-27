@@ -4,5 +4,6 @@ packages/
 bin/
 obj/
 .vscode/
+.ipynb_checkpoints/
 kernel-*.json
 Data/visualization_train.csv
