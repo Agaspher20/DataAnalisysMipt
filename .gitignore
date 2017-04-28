@@ -7,3 +7,5 @@ obj/
 .ipynb_checkpoints/
 kernel-*.json
 Data/visualization_train.csv
+Data/lectures.txt
+Data/recipes.json
