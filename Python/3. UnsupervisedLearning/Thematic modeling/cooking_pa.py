@@ -260,27 +260,28 @@ from sklearn.cross_validation import cross_val_score
 overall_max_topic = 0
 documents_topics = []
 for i in range(0, len(corpus2)):
-    document_topics = model2.get_document_topics(corpus2[i])
+    document_topics = model2.get_document_topics(corpus2[i], minimum_probability=0)
     documents_topics.append(document_topics)
     max_topic = max(document_topics, key=lambda topic: topic[0])[0]
     if(max_topic > overall_max_topic):
         overall_max_topic = max_topic
 #%%
-probability_matrix = []
+probability_matrix = np.zeros((len(documents_topics), overall_max_topic + 1))
 for i in range(0, len(documents_topics)):
     document_topics = documents_topics[i]
-    matrix_row = np.zeros(overall_max_topic + 1)
     for topic in document_topics:
-        matrix_row[topic[0]] = topic[1]
-    probability_matrix.append(matrix_row)
+        probability_matrix[i][topic[0]] = topic[1]
 #%%
-true_responses = map(lambda recipe: recipe['id'], recipes)
+import itertools as it
+true_responses = map(lambda recipe: recipe['cuisine'], recipes)
 #%%
 forest_classifier = RandomForestClassifier(n_estimators=100)
-X = np.array(probability_matrix)
+X = probability_matrix
 y = np.array(true_responses)
+print X.shape, y.shape
 #%%
 scores = cross_val_score(forest_classifier, X, y, cv=3)
+        
 #%%
 def save_answers5(accuracy):
      with open("cooking_LDA_pa_task5.txt", "w") as fout:
@@ -289,6 +290,7 @@ def save_answers5(accuracy):
 mean_score = scores.mean()
 print mean_score
 save_answers5(mean_score)
+
 # Для такого большого количества классов это неплохая точность. Вы можете попроовать обучать RandomForest на
 # исходной матрице частот слов, имеющей значительно большую размерность, и увидеть, что accuracy увеличивается
 # на 10–15%. Таким образом, LDA собрал не всю, но достаточно большую часть информации из выборки, в матрице
