@@ -256,30 +256,40 @@ save_answers4(document_topics_sum2, document_topics_sum3)
 #%%
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import cross_val_score
+
 #%%
-overall_max_topic = 0
-documents_topics = []
-for i in range(0, len(corpus2)):
-    document_topics = model2.get_document_topics(corpus2[i], minimum_probability=0)
-    documents_topics.append(document_topics)
-    max_topic = max(document_topics, key=lambda topic: topic[0])[0]
-    if(max_topic > overall_max_topic):
-        overall_max_topic = max_topic
-#%%
-probability_matrix = np.zeros((len(documents_topics), overall_max_topic + 1))
-for i in range(0, len(documents_topics)):
-    document_topics = documents_topics[i]
-    for topic in document_topics:
-        probability_matrix[i][topic[0]] = topic[1]
+def build_probability_matrix(corpus, model):
+    overall_max_topic = 0
+    documents_topics = []
+    for i,doc in enumerate(corpus):
+        document_topics = model.get_document_topics(doc, minimum_probability=0)
+        documents_topics.append(document_topics)
+        max_topic = max(document_topics, key=lambda topic: topic[0])[0]
+        if(max_topic > overall_max_topic):
+            overall_max_topic = max_topic
+    
+    probability_matrix = np.zeros((len(documents_topics), overall_max_topic + 1))
+    for i,document_topics in enumerate(documents_topics):
+        for topic in document_topics:
+            probability_matrix[i][topic[0]] = topic[1]
+    return probability_matrix
 #%%
 import itertools as it
 true_responses = map(lambda recipe: recipe['cuisine'], recipes)
 #%%
 forest_classifier = RandomForestClassifier(n_estimators=100)
-X = probability_matrix
+X = build_probability_matrix(corpus2, model2)
 y = np.array(true_responses)
 print X.shape, y.shape
+
+scores = cross_val_score(forest_classifier, X, y, cv=3)
+
 #%%
+forest_classifier = RandomForestClassifier(n_estimators=100)
+X = build_probability_matrix(corpus2, model2)
+y = np.array(true_responses)
+print X.shape, y.shape
+
 scores = cross_val_score(forest_classifier, X, y, cv=3)
         
 #%%
