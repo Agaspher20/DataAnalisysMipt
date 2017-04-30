@@ -305,6 +305,27 @@ save_answers5(mean_score)
 # исходной матрице частот слов, имеющей значительно большую размерность, и увидеть, что accuracy увеличивается
 # на 10–15%. Таким образом, LDA собрал не всю, но достаточно большую часть информации из выборки, в матрице
 # низкого ранга.
+#%%
+forest_classifier = RandomForestClassifier(n_estimators=100)
+
+max_doc_id = 0
+for i,row in enumerate(corpus2):
+    for j,col in enumerate(row):
+        if(col[0] > max_doc_id):
+            max_doc_id = col[0]
+
+X = np.zeros((len(corpus2), max_doc_id+1))
+for i,row in enumerate(corpus2):
+    for j,col in enumerate(row):
+        X[i][col[0]] = col[1]
+
+y = np.array(true_responses)
+print X.shape, y.shape
+
+#%%
+scores = cross_val_score(forest_classifier, X, y, cv=3)
+mean_score = scores.mean()
+print mean_score
 
 ## LDA — вероятностная модель
 # Матричное разложение, использующееся в LDA, интерпретируется как следующий процесс генерации документов.
@@ -328,7 +349,8 @@ def generate_recipe(model, num_ingredients):
         terms = [x[0] for x in topic]
         w = np.random.choice(terms, p=topic_distr)
         print w
-
+#%%
+generate_recipe(model2, 8)
 #%%
 ## Интерпретация построенной модели
 # Вы можете рассмотреть топы ингредиентов каждой темы. Большиснтво тем сами по себе похожи на рецепты; в
@@ -364,7 +386,8 @@ def plot_matrix(tc_matrix):
     seaborn.heatmap(tc_matrix, square=True)
 #%%
 # Визуализируйте матрицу
-
+tc_matrix_2 = compute_topic_cuisine_matrix(model2, corpus2, recipes)
+plot_matrix(tc_matrix_2)
 # Чем темнее квадрат в матрице, тем больше связь этой темы с данной кухней. Мы видим, что у нас есть темы,
 # которые связаны с несколькими кухнями. Такие темы показывают набор ингредиентов, которые популярны в кухнях
 # нескольких народов, то есть указывают на схожесть кухонь этих народов. Некоторые темы распределены по всем
