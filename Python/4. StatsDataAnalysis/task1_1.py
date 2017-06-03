@@ -7,8 +7,9 @@
 
 #%%
 import pandas as pd
+import numpy as np
 
-frame = pd.read_csv("..\..\Data\water.txt", sep="\t", header=0)
+frame = pd.read_csv("water.txt", sep="\t", header=0)
 
 #%%
 print frame.head()
@@ -24,25 +25,38 @@ def confidential_bounds(frame):
 #    return _zconfint_generic(mean, std/np.sqrt(count), 0.05, "two-sided")
     return _tconfint_generic(mean, std/np.sqrt(count), count-1, 0.05, "two-sided")
 #%%
-minVal,maxVal = confidential_bounds(frame["mortality"])
-print np.round(minVal, 4), np.round(maxVal, 4), frame["mortality"].mean()
+trust_interval_mortality = confidential_bounds(frame["mortality"])
+print "Mortality trust interval: ", np.round(trust_interval_mortality, 4)
+print "Mortality mean", np.round(frame["mortality"].mean(), 4)
 
+# На данных из предыдущего вопроса постройте 95% доверительный интервал для средней годовой смертности по всем
+# южным городам. Чему равна его верхняя граница? Округлите ответ до 4 знаков после десятичной точки.
 #%%
 south_frame = frame[frame.location=="South"]
-south_minVal,south_maxVal = confidential_bounds(south_frame["mortality"])
-print np.round(south_minVal, 4), np.round(south_maxVal, 4), south_frame["mortality"].mean()
+trust_interval_mortality_south = confidential_bounds(south_frame["mortality"])
+print "Mortality for south cities trust interval: ", np.round(trust_interval_mortality_south, 4)
+print "Mortality for south cities mean: ", np.round(south_frame["mortality"].mean(), 4)
 
+# На тех же данных постройте 95% доверительный интервал для средней годовой смертности по всем северным городам.
+# Пересекается ли этот интервал с предыдущим? Как вы думаете, какой из этого можно сделать вывод? 
 #%%
 north_frame = frame[frame.location=="North"]
-north_minVal,north_maxVal = confidential_bounds(north_frame["mortality"])
-print np.round(north_minVal, 4), np.round(north_maxVal, 4)
+trust_interval_mortality_north = confidential_bounds(north_frame["mortality"])
+print "Mortality for north cities trust interval: ", np.round(trust_interval_mortality_north, 4)
+print "Mortality for north cities mean: ", np.round(north_frame["mortality"].mean(), 4)
+# Интервалы не пересекаются; видимо, средняя смертность на севере и на юге существенно разная 
 
+# Пересекаются ли 95% доверительные интервалы для средней жёсткости воды в северных и южных городах?
 #%%
-south_hardness_min,south_hardness_max = confidential_bounds(south_frame["hardness"])
-north_hardness_min,north_hardness_max = confidential_bounds(north_frame["hardness"])
-print np.round(south_hardness_min, 4), np.round(south_hardness_max, 4)
-print np.round(north_hardness_min, 4), np.round(north_hardness_max, 4)
+trust_interval_hardness_south = confidential_bounds(south_frame["hardness"])
+trust_interval_hardness_north = confidential_bounds(north_frame["hardness"])
+print "Water hardness trust interval for south cities: ", np.round(trust_interval_hardness_south, 4)
+print "Water hardness trust interval for north cities: ", np.round(trust_interval_hardness_north, 4)
+# Не пересекаются
 
+# Вспомним формулу доверительного интервала для среднего нормально распределённой случайной величины
+# с дисперсией sigma^2
+# При σ=1 какой нужен объём выборки, чтобы на уровне доверия 95% оценить среднее с точностью ±0.1?
 #%%
 z = 1.95996
 print (1./(0.1/z))**2
