@@ -9,7 +9,7 @@
 import pandas as pd
 import numpy as np
 
-frame = pd.read_csv("water.txt", sep="\t", header=0)
+frame = pd.read_csv("..\..\Data\water.txt", sep="\t", header=0)
 
 #%%
 print frame.head()

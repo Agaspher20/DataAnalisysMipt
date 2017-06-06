@@ -9,6 +9,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SupervisedLearning", "Super
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LibExtensions", "LibExtensions\LibExtensions.fsproj", "{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "StatsForDataAnalysis", "StatsForDataAnalysis\StatsForDataAnalysis.fsproj", "{FD5E1197-15E8-4A99-97CF-31E88598342F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3CA56E5-FFFA-4FDE-90EB-CF61FF67A845}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD5E1197-15E8-4A99-97CF-31E88598342F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD5E1197-15E8-4A99-97CF-31E88598342F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD5E1197-15E8-4A99-97CF-31E88598342F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD5E1197-15E8-4A99-97CF-31E88598342F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
