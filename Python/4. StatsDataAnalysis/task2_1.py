@@ -22,13 +22,13 @@ print np.round((Z,p_val,norm.cdf(Z)), 4)
 # Имеются данные о стоимости и размерах 53940 бриллиантов.
 #%%
 import pandas as pd
-frame = pd.read_csv("diamonds.txt", sep="\t", header=0)
+frame = pd.read_csv("..\..\Data\diamonds.txt", sep="\t", header=0)
 frame.head()
 
 # Отделите 25% случайных наблюдений в тестовую выборку с помощью функции
 # sklearn.cross_validation.train_test_split (зафиксируйте random state = 1).
 #%%
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 y = frame["price"].as_matrix()
 x = frame.drop("price", axis=1).as_matrix()
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=1)
@@ -46,7 +46,7 @@ forest = RandomForestRegressor(random_state=1).fit(x_train, y_train)
 # Сделайте предсказания на тестовой выборке.
 #%%
 forest_predictions = map(lambda x_row: forest.predict(x_row.reshape(1,-1))[0], x_test)
-linear_predictions = map(lambda x_row: linear.predict(x_test[0].reshape(1,-1))[0], x_test)
+linear_predictions = map(lambda x_row: linear.predict(x_row.reshape(1,-1))[0], x_test)
 
 # Посчитайте модули отклонений предсказаний от истинных цен.
 #%%
