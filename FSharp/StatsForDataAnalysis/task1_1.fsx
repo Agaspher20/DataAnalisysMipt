@@ -1,5 +1,4 @@
 ﻿#r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll"
-#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
 #r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
 #r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
 
@@ -8,7 +7,6 @@
 open System
 
 open FSharp.Data
-open FSharp.Charting
 
 open MathNet.Numerics
 open MathNet.Numerics.Statistics
