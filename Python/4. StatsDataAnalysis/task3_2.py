@@ -121,8 +121,8 @@ print chi_stat_happiness[1]
 #%%
 def v_Cramer_correlation(table):
     chi_stat = chi2_contingency(table)[0]
-    k_min = np.min(table)
+    k_min = np.min(table.shape)
     n = np.sum(table)
-    return np.sqrt(chi_stat/(n*k_min))
+    return np.sqrt(chi_stat/(n*(k_min-1)))
 #%%
 print "V-Cramer statistic is: %.4f" % np.round(v_Cramer_correlation(contingency_table), 4)
