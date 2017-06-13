@@ -4,7 +4,7 @@
 #%%
 import pandas as pd
 import numpy as np
-frame = pd.read_csv("illiteracy.txt", sep="\t", header=0)
+frame = pd.read_csv("..\..\Data\illiteracy.txt", sep="\t", header=0)
 frame.head()
 # Чему равен выборочный коэффициент корреляции Пирсона между этими двумя признаками?
 # Округлите до четырёх знаков после десятичной точки.
