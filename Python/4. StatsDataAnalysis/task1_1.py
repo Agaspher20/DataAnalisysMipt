@@ -12,8 +12,8 @@ import numpy as np
 frame = pd.read_csv("..\..\Data\water.txt", sep="\t", header=0)
 
 #%%
-print frame.head()
 print frame.shape
+frame.head()
 
 #%%
 from statsmodels.stats.weightstats import _zconfint_generic, _tconfint_generic
@@ -22,7 +22,6 @@ def confidential_bounds(frame):
     std = frame.std(ddof=1)
     mean = frame.mean()
     count = frame.shape[0]
-#    return _zconfint_generic(mean, std/np.sqrt(count), 0.05, "two-sided")
     return _tconfint_generic(mean, std/np.sqrt(count), count-1, 0.05, "two-sided")
 #%%
 trust_interval_mortality = confidential_bounds(frame["mortality"])
@@ -32,7 +31,7 @@ print "Mortality mean", np.round(frame["mortality"].mean(), 4)
 # На данных из предыдущего вопроса постройте 95% доверительный интервал для средней годовой смертности по всем
 # южным городам. Чему равна его верхняя граница? Округлите ответ до 4 знаков после десятичной точки.
 #%%
-south_frame = frame[frame.location=="South"]
+south_frame = frame[frame["location"] == "South"]
 trust_interval_mortality_south = confidential_bounds(south_frame["mortality"])
 print "Mortality for south cities trust interval: ", np.round(trust_interval_mortality_south, 4)
 print "Mortality for south cities mean: ", np.round(south_frame["mortality"].mean(), 4)
@@ -40,7 +39,7 @@ print "Mortality for south cities mean: ", np.round(south_frame["mortality"].mea
 # На тех же данных постройте 95% доверительный интервал для средней годовой смертности по всем северным городам.
 # Пересекается ли этот интервал с предыдущим? Как вы думаете, какой из этого можно сделать вывод? 
 #%%
-north_frame = frame[frame.location=="North"]
+north_frame = frame[frame["location"] == "North"]
 trust_interval_mortality_north = confidential_bounds(north_frame["mortality"])
 print "Mortality for north cities trust interval: ", np.round(trust_interval_mortality_north, 4)
 print "Mortality for north cities mean: ", np.round(north_frame["mortality"].mean(), 4)

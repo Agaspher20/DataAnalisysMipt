@@ -1,16 +1,18 @@
 ﻿#r @"..\packages\FSharp.Data.2.3.2\lib\net40\FSharp.Data.dll"
-#r @"..\packages\FSharp.Charting.0.90.14\lib\net40\FSharp.Charting.dll"
 #r @"..\packages\MathNet.Numerics.Signed.3.17.0\lib\net40\MathNet.Numerics.dll"
 #r @"..\packages\MathNet.Numerics.FSharp.Signed.3.17.0\lib\net40\MathNet.Numerics.FSharp.dll"
+
+#r @"bin\Debug\LibExtensions.dll"
 
 open System
 
 open FSharp.Data
-open FSharp.Charting
 
 open MathNet.Numerics
 open MathNet.Numerics.Statistics
 open MathNet.Numerics.Distributions
+
+open LibExtensions.Stats
 
 [<Literal>]
 let DataPath = __SOURCE_DIRECTORY__ + @"..\..\..\Data\water.txt"
@@ -41,15 +43,7 @@ dataSet.Rows
 // кальция, тем жёстче вода. Города дополнительно поделены на северные и южные.
 //
 // Постройте 95% доверительный интервал для средней годовой смертности в больших городах. Чему равна его нижняя
-// граница? Округлите ответ до 4 знаков после десятичной точки. 
-
-let confidenceInterval (alpha:float) (data:seq<float>) =
-    let mean = Statistics.Mean(data)
-    let std = Statistics.StandardDeviation(data)
-    let length = (data |> Seq.length |> float)
-    let t = StudentT.InvCDF(0., 1., length - 1., alpha/2.)
-    let T = -t * (std / sqrt(length))
-    (mean-T,mean+T)
+// граница? Округлите ответ до 4 знаков после десятичной точки.
 
 dataSet.Rows
 |> Seq.map ((fun obs -> obs.Mortality) >> float)

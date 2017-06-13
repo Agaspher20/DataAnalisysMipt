@@ -1,6 +1,7 @@
 ﻿namespace LibExtensions
 
 open FSharp.Charting
+
 module Charting = 
     let maxX max (chart:ChartTypes.GenericChart) =
         chart.WithXAxis(Max=max)
