@@ -99,25 +99,22 @@ for col_name in data_columns:
 # H1: не одинаково.
 #%%
 def compare_genes_diffs(right, left, columns):
-    diffs_count = 0
-    for col_name in columns:
-        test_result = scipy.stats.ttest_ind(right[col_name], left[col_name], equal_var = False)
-        if test_result.pvalue < 0.05:
-            # print "\"%s\": statistic=%f, p-value=%f" % (col_name,test_result.statistic,test_result.pvalue)
-            diffs_count += 1
-    return diffs_count
+    return [scipy.stats.ttest_ind(right[col_name], left[col_name], equal_var = False).pvalue for col_name in columns]
 #%%
 normal_early_diff_genes = compare_genes_diffs(normal_neoplasia, early_neoplasia, data_columns)
-print "T-Student test normal vs early neoplasia different distributed genes: %i" % normal_early_diff_genes
-write_answer("normal_early.txt", normal_early_diff_genes)
+normal_early_diff_genes_count = len(filter(lambda pvalue: pvalue < 0.05, normal_early_diff_genes))
+print "T-Student test normal vs early neoplasia different distributed genes: %i" % normal_early_diff_genes_count
+write_answer("normal_early.txt", normal_early_diff_genes_count)
 #%%
 early_cancer_diff_genes = compare_genes_diffs(early_neoplasia, cancer, data_columns)
-print "T-Student test early neoplasia vs cancer different distributed genes: %i" % early_cancer_diff_genes
-write_answer("early_cancer.txt", early_cancer_diff_genes)
+early_cancer_diff_genes_count = len(filter(lambda pvalue: pvalue < 0.05, early_cancer_diff_genes))
+print "T-Student test early neoplasia vs cancer different distributed genes: %i" % early_cancer_diff_genes_count
+write_answer("early_cancer.txt", early_cancer_diff_genes_count)
 
 # Часть 2: поправка методом Холма
 # Для этой части задания вам понадобится модуль multitest из statsmodels.
-#   import statsmodels.stats.multitest as smm
+#%%
+import statsmodels.stats.multitest as smm
 # В этой части задания нужно будет применить поправку Холма для получившихся двух наборов достигаемых уровней
 # значимости из предыдущей части. Обратите внимание, что поскольку вы будете делать поправку для каждого из
 # двух наборов p-value отдельно, то проблема, связанная с множественной проверкой останется.
@@ -135,6 +132,55 @@ write_answer("early_cancer.txt", early_cancer_diff_genes)
 #       но не меняется значение уровня доверия (то есть для отбора значимых изменений скорректированные значения
 #       уровня значимости нужно сравнивать с порогом 0.025, а не 0.05)!
 
+#%%
+(reject_n_e,pvalues_normal_early_holm,alphac_n_e_sidak,alphac_n_e_bonf) = smm.multipletests(
+    normal_early_diff_genes,
+    alpha=0.025,
+    method="holm"
+)
+print len(filter(lambda pvalue: pvalue < 0.05, pvalues_normal_early_holm))
+#%%
+(reject_e_c,pvalues_early_cancer_holm,alphac_e_c_sidak,alphac_e_c_bonf) = smm.multipletests(
+    early_cancer_diff_genes,
+    alpha=0.025,
+    method="holm")
+print len(filter(lambda pvalue: pvalue < 0.05, pvalues))
+#%%
+def calc_fold_change(control, treatment, column):
+    ctrl_mean = control[column].mean()
+    trtmnt_mean = treatment[column].mean()
+    return abs(trtmnt_mean/ctrl_mean if trtmnt_mean > ctrl_mean else -ctrl_mean/trtmnt_mean)
+def calculate_fold_changes(control_data, treatment_data, pvalues, columns, alpha):
+    return map(
+        lambda (column, pvalue): calc_fold_change(control_data, treatment_data, column),
+        filter(
+            lambda (column, pvalue): pvalue < alpha,
+            zip(columns, pvalues)
+        )
+    )
+#%%
+folds_normal_early = calculate_fold_changes(
+    normal_neoplasia,
+    early_neoplasia,
+    pvalues_normal_early_holm,
+    data_columns,
+    0.025
+)
+folds_normal_early_meaningful_count = len(filter(lambda fld: fld > 1.5, folds_normal_early))
+print "Normal-early after holm fix: %i" % folds_normal_early_meaningful_count
+write_answer("normal_early_holm.txt", folds_normal_early_meaningful_count)
+#%%
+folds_early_cancer = calculate_fold_changes(
+    early_neoplasia,
+    cancer,
+    pvalues_early_cancer_holm,
+    data_columns,
+    0.025
+)
+folds_early_cancer_meaningful_count = len(filter(lambda fld: fld > 1.5, folds_early_cancer))
+print "Early-cancer after holm fix: %i" % folds_normal_early_meaningful_count
+write_answer("early_cancer_holm.txt", folds_early_cancer_meaningful_count)
+
 
 # Часть 3: поправка методом Бенджамини-Хохберга
 # Данная часть задания аналогична второй части за исключением того, что нужно будет использовать метод
@@ -146,6 +192,41 @@ write_answer("early_cancer.txt", early_cancer_diff_genes)
 # В качестве ответа к этому заданию требуется ввести количество значимых отличий в каждой группе после того,
 # как произведена коррекция Бенджамини-Хохберга, причем так же, как и во второй части, считать только такие
 # отличия, у которых abs(fold change) > 1.5.
+#%%
+(reject_n_e,pvalues_normal_early_hohberg,alphac_n_e_sidak,alphac_n_e_bonf) = smm.multipletests(
+    normal_early_diff_genes,
+    alpha=0.05,
+    method="fdr_bh"
+)
+print len(filter(lambda pvalue: pvalue < 0.05, pvalues_normal_early_hohberg))
+#%%
+(reject_e_c,pvalues_early_cancer_hohberg,alphac_e_c_sidak,alphac_e_c_bonf) = smm.multipletests(
+    early_cancer_diff_genes,
+    alpha=0.05,
+    method="fdr_bh")
+print len(filter(lambda pvalue: pvalue < 0.05, pvalues_early_cancer_hohberg))
+#%%
+folds_normal_early_hohberg = calculate_fold_changes(
+    normal_neoplasia,
+    early_neoplasia,
+    pvalues_normal_early_hohberg,
+    data_columns,
+    0.05
+)
+folds_normal_early_meaningful_count_hohberg = len(filter(lambda fld: fld > 1.5, folds_normal_early_hohberg))
+print "Normal-early after benjamini-hohberg fix: %i" % folds_normal_early_meaningful_count_hohberg
+write_answer("normal_early_hohberg.txt", folds_normal_early_meaningful_count_hohberg)
+#%%
+folds_early_cancer_hohberg = calculate_fold_changes(
+    early_neoplasia,
+    cancer,
+    pvalues_early_cancer_hohberg,
+    data_columns,
+    0.05
+)
+folds_early_cancer_meaningful_count_hohberg = len(filter(lambda fld: fld > 1.5, folds_early_cancer_hohberg))
+print "Early-cancer after benjamini-hohberg fix: %i" % folds_early_cancer_meaningful_count_hohberg
+write_answer("early_cancer_hohberg.txt", folds_early_cancer_meaningful_count_hohberg)
 
 
 # P.S. Вспомните, какое значение имеет уровень значимости α в каждой из поправок: Холма и Бенджамини-Хохберга.
