@@ -19,7 +19,7 @@
 import pandas as pd
 import numpy as np
 
-frame = pd.read_csv("..\..\Data\\ab_browser_test.csv", sep=",", header=0)
+frame = pd.read_csv("ab_browser_test.csv", sep=",", header=0)
 frame.head()
 
 # Основная метрика, на которой мы сосредоточимся в этой работе, — это количество пользовательских кликов на
@@ -46,8 +46,10 @@ def stat_intervals(stat, alpha):
     boundaries = np.percentile(stat, [100 * alpha / 2., 100 * (1 - alpha / 2.)])
     return boundaries
 #%%
-exp_clicks = get_bootstrap_samples(frame[frame["slot"]=="exp"]["n_clicks"].values, 1000)
-control_clicks = get_bootstrap_samples(frame[frame["slot"]=="control"]["n_clicks"].values, 1000)
+np.random.seed(0)
+n_boot_samples = 500
+exp_clicks = get_bootstrap_samples(frame[frame["slot"]=="exp"]["n_clicks"].values, n_boot_samples)
+control_clicks = get_bootstrap_samples(frame[frame["slot"]=="control"]["n_clicks"].values, n_boot_samples)
 
 exp_clicks_means = map(np.mean, exp_clicks)
 exp_clicks_medians = map(np.median, exp_clicks)
@@ -110,9 +112,94 @@ print "95%% Confidence interval for difference between medians: [%f;%f]" % tuple
 # Где sparams=(n-1) означают число степеней свободы = длине выборки - 1.
 # Чтобы получить такой же ответ, как у нас, зафиксируйте seed и количество псевдовыборок:
 #%%
-np.random.seed(0)
-n_boot_samples = 500
-
+from scipy import stats
+%pylab inline
+sample_0 = control_clicks[0]
+expected_frequences_s0 = [len(sample_0)*stats.norm.pdf(x) for x in range(min(sample_0), max(sample_0) + 1)]
+pylab.xlim(0, 50)
+pylab.bar(range(len(np.bincount(sample_0))), np.bincount(sample_0), color = 'b', label = 'sample0_stat')
+pylab.bar(range(len(expected_frequences_s0)), expected_frequences_s0, color = 'r', label = 'norm_distr')
+pylab.legend()
+#%%
+from scipy import stats
+def calc_chisquare_stats(sample):
+    mean = np.mean(sample)
+    sample_size = len(sample)
+    expected_means = [mean for x in xrange(0, sample_size)]
+    stat = stats.chisquare(sample_size, expected_means, ddof=0, axis=0)
+    return (mean, stat.statistic, stat.pvalue)
+control_clicks_chi = map(calc_chisquare_stats, control_clicks)
+#%%
+mean_plot = stats.probplot(map(lambda (m,s,p): m, control_clicks_chi), dist = "norm", plot = pylab)
+#%%
+stat_plot = stats.probplot(map(lambda (m,s,p): s, control_clicks_chi), dist = "chi2", sparams=(n_boot_samples-1), plot = pylab)
 # В качестве ответа отметьте верные утвердения о значениях R^2, которые генерирует scipy.stats.probplot
 # при отображении qq-графиков: одно c графика для среднего и одно с графика для выборочной суммы квадратов
 # отклонения от выборочной суммы.
+#%%
+print "Mean R^2: %f" % mean_plot[1][2]
+print "Chi square R^2: %f" % stat_plot[1][2]
+# R2 для выборочного среднего получился больше, чем 0.99
+# R2 для выборочной суммы квадратов отклонения от выборочной суммы получился больше, чем 0.99
+
+# Одним из возможных аналогов t-критерия, которым можно воспрользоваться, является тест Манна-Уитни.
+# На достаточно обширном классе распределений он является асимптотически более эффективным, чем t-критерий, и при этом не требует параметрических
+# предположений о характере распределения.
+# Разделите выборку на две части, соответствующие control и exp группам. Преобразуйте данные к виду, чтобы каждому пользователю соответствовало
+# суммарное значение его кликов.
+# С помощью критерия Манна-Уитни проверьте гипотезу о равенстве средних.
+# Что можно сказать о получившемся значении достигаемого уровня значимости ? Выберите все правильные ответы
+#%%
+exp_data = frame[frame["slot"]=="exp"]
+control_data = frame[frame["slot"]=="control"]
+
+exp_user_clicks = exp_data.groupby("userID").agg("sum")["n_clicks"]
+control_user_clicks = control_data.groupby("userID").agg("sum")["n_clicks"]
+
+mann_whitney_stat = stats.mannwhitneyu(control_user_clicks, exp_user_clicks, alternative="two-sided")
+print "Mann-Whitney criterion pvalue result: %.4f" % np.round(mann_whitney_stat.pvalue, 4)
+mann_whitney_stat
+# Получившееся значение достигаемого уровня значимости свидетельствует о статистической значимости отличий между двумя выборками
+
+# Проверьте, для какого из браузеров наиболее сильно выражено отличие между количеством кликов в контрольной и
+# экспериментальной группах.
+# Для этого примените для каждого из срезов (по каждому из уникальных значений столбца browser) критерий Манна-Уитни
+# между control и exp группами и сделайте поправку Холма-Бонферрони на множественную проверку с α=0.05.
+# Какое заключение можно сделать исходя из полученных результатов?
+# В качестве ответа введите количество незначимых изменений с точки зрения результатов, полученных после введения коррекции.
+#%%
+from statsmodels.sandbox.stats.multicomp import multipletests
+exp_browser_names = set(exp_data["browser"])
+exp_browser_data = {}
+for browser_name in exp_browser_names:
+    exp_browser_data[browser_name] = exp_data[exp_data["browser"]==browser_name]
+control_browser_names = set(control_data["browser"])
+control_browser_data = {}
+for browser_name in control_browser_names:
+    control_browser_data[browser_name] = control_data[control_data["browser"]==browser_name]
+all_browser_names = exp_browser_names.union(control_browser_names)
+mann_whitney_pvalues = []
+for browser_name in all_browser_names:
+    exp_b_user_clicks = exp_browser_data[browser_name]["n_clicks"].values
+    control_b_user_clicks = control_browser_data[browser_name]["n_clicks"].values
+    mann_whitney_stat = stats.mannwhitneyu(control_b_user_clicks, exp_b_user_clicks, alternative="two-sided")
+    mann_whitney_pvalues.append(mann_whitney_stat.pvalue)
+mann_whitney_pvalues_corrected = multipletests(mann_whitney_pvalues, alpha = 0.05, method = 'holm')
+for b in zip(all_browser_names, mann_whitney_pvalues_corrected[0]):
+    print "%s is statistically valuable: %r" % b
+print "Count of not rejected hypothesis: %i" % len(filter(lambda x: not(x), mann_whitney_pvalues_corrected[0]))
+
+# Для каждого браузера в каждой из двух групп (control и exp) посчитайте долю запросов, в которых пользователь не кликнул ни разу.
+# Это можно сделать, поделив сумму значений n_nonclk_queries на сумму значений n_queries.
+# Умножив это значение на 100, получим процент некликнутых запросов, который можно легче проинтерпретировать.
+# Сходятся ли результаты проведенного Вами анализа с показателем процента некликнутых запросов?
+# Отметьте все верные утверждения.
+#%%
+for browser_name in all_browser_names:
+    exp_no_click_count = float(exp_browser_data[browser_name]["n_nonclk_queries"].sum())
+    exp_queries_count = float(exp_browser_data[browser_name]["n_queries"].sum())
+    control_no_click_count = float(control_browser_data[browser_name]["n_nonclk_queries"].sum())
+    control_queries_count = float(control_browser_data[browser_name]["n_queries"].sum())
+    exp_percent = exp_no_click_count/exp_queries_count*100
+    control_percent = control_no_click_count/control_queries_count*100
+    print "%s no click queries percentage: exp=%f\tcontrol=%f\tdiff=%f" % (browser_name, exp_percent, control_percent, (control_percent-exp_percent))
