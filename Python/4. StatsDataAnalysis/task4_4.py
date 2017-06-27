@@ -1,7 +1,12 @@
 
 # В этом задании вам предлагается проанализировать данные одной из американских телекоммуникационных компаний о
 # пользователях, которые потенциально могут уйти.
-# churn_analysis.csv
+#%%
+import pandas as pd
+import numpy as np
+
+frame = pd.read_csv("churn_analysis.csv", sep=",", header=0)
+frame.head()
 # Измерены следующие признаки:
 #    state — штат США
 #    account_length — длительность использования аккаунта
@@ -29,8 +34,27 @@
 # Обязательно выставьте correction=False (о том, что это значит, вы узнаете из следующих вопросов).
 # Сколько достигаемых уровней значимости оказались меньше, чем α=0.05?
 #%%
-
-
+control_group = frame[frame["treatment"] == 1]
+states = list(set(control_group["state"].values))
+states_count = len(states)
+control_states_pivot = pd.pivot_table(control_group, values=["treatment"], index=["state"], columns=["churn"], fill_value = 0, aggfunc='count')
+control_states_pivot
+#%%
+from scipy import stats
+pcount = 0
+for i in xrange(states_count-1):
+    first_state = states[i]
+    for j in xrange(i+1, states_count):
+        second_state = states[j]
+        chi_2_stat = stats.chi2_contingency(
+            control_states_pivot.loc[[first_state,second_state],:],
+            correction=False)
+        pvalue = chi_2_stat[1]
+        if(pvalue < 0.05):
+            pcount += 1
+print pcount
+#%%
+print stats.chi2_contingency(control_states_pivot, correction=False)
 # Какие проблемы Вы видите в построении анализа из первого вопроса? Отметьте все верные утверждения. 
 #    Интерпретация числа достигаемых уровней значимости, меньших α=0.05, некорректна, поскольку не сделана поправка
 #      на множественную проверку гипотез.
