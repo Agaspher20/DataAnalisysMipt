@@ -5,7 +5,7 @@
 import pandas as pd
 import numpy as np
 
-frame = pd.read_csv("churn_analysis.csv", sep=",", header=0)
+frame = pd.read_csv("..\..\Data\churn_analysis.csv", sep=",", header=0)
 frame.head()
 # Измерены следующие признаки:
 #    state — штат США
@@ -36,23 +36,26 @@ frame.head()
 #%%
 control_group = frame[frame["treatment"] == 1]
 states = list(set(control_group["state"].values))
-states_count = len(states)
 control_states_pivot = pd.pivot_table(control_group, values=["treatment"], index=["state"], columns=["churn"], fill_value = 0, aggfunc='count')
 control_states_pivot
 #%%
 from scipy import stats
-pcount = 0
-for i in xrange(states_count-1):
-    first_state = states[i]
-    for j in xrange(i+1, states_count):
-        second_state = states[j]
-        chi_2_stat = stats.chi2_contingency(
-            control_states_pivot.loc[[first_state,second_state],:],
-            correction=False)
-        pvalue = chi_2_stat[1]
-        if(pvalue < 0.05):
-            pcount += 1
-print pcount
+def calculate_valueable_diffs(pivot_table, states, correction):
+    pcount = 0
+    states_count = len(states)
+    for i in xrange(states_count-1):
+        first_state = states[i]
+        for j in xrange(i+1, states_count):
+            second_state = states[j]
+            chi_2_stat = stats.chi2_contingency(
+                pivot_table.loc[[first_state,second_state],:],
+                correction=correction)
+            pvalue = chi_2_stat[1]
+            if(pvalue < 0.05):
+                pcount += 1
+    return pcount
+#%%
+print calculate_valueable_diffs(control_states_pivot, states, False)
 #%%
 print stats.chi2_contingency(control_states_pivot, correction=False)
 # Какие проблемы Вы видите в построении анализа из первого вопроса? Отметьте все верные утверждения. 
