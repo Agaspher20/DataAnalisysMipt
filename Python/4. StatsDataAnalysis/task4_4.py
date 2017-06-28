@@ -39,39 +39,30 @@ states = list(set(control_group["state"].values))
 control_states_pivot = pd.pivot_table(control_group, values=["treatment"], index=["state"], columns=["churn"], fill_value = 0, aggfunc='count')
 control_states_pivot
 #%%
+not_enough_data_count = len(filter(lambda val: val < 5, control_states_pivot.loc[:,[False, True]].values))
+not_enough_data_count += len(filter(lambda val: val < 5, control_states_pivot.loc[:,[True, False]].values))
+not_enough_data_count
+#%%
 from scipy import stats
-def calculate_valueable_diffs(pivot_table, states, correction):
-    pcount = 0
+def calculate_pairwise_diffs(pivot_table, states, stat_calculator):
     states_count = len(states)
+    result = []
     for i in xrange(states_count-1):
         first_state = states[i]
         for j in xrange(i+1, states_count):
             second_state = states[j]
-            chi_2_stat = stats.chi2_contingency(
-                pivot_table.loc[[first_state,second_state],:],
-                correction=correction)
-            pvalue = chi_2_stat[1]
-            if(pvalue < 0.05):
-                pcount += 1
-    return pcount
+            chi_2_stat = stat_calculator(pivot_table.loc[[first_state,second_state],:])
+            result.append(chi_2_stat)
+    return result
 #%%
-print calculate_valueable_diffs(control_states_pivot, states, False)
-#%%
-print stats.chi2_contingency(control_states_pivot, correction=False)
+def chi_2_stat_no_correction(table):
+    return stats.chi2_contingency(table, correction=False)
+print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_no_correction)))
 # Какие проблемы Вы видите в построении анализа из первого вопроса? Отметьте все верные утверждения. 
 #    Интерпретация числа достигаемых уровней значимости, меньших α=0.05, некорректна, поскольку не сделана поправка
 #      на множественную проверку гипотез.
-#    Хи-квадрат используется для того, чтобы сравнить выборку с некоторым воздействием (treatment) и выборку без этого
-#      воздействия (control). Мы же в первом задании сравнивали штаты, используя данные только control группы. Для
-#      данных только из control группы использование xи-квадрат неправомерно.
 #    Применение критерия xи-квадрат для этих данных не обосновано, потому что не выполняются условия, при которых этот
 #      критерий дает правильные результаты.
-#    Поправку на множественную проверку здесь применять нельзя — она используется только для группы критериев,
-#      проверяющих равенство средних (типа t-критерия). Критерий xи-квадрат не принадлежит этому семейству, поэтому
-#      поправка не нужна.
-#    Анализ нужно было начинать с применения xи-квадрат к таблице сопряженности, в которой присутствовали сразу все
-#      возможные штаты. Достигаемой уровень значимости такой проверки = 0.7, что дает нам гарантию, что нет ни одной
-#      пары штатов, в которых отличие в соотношениях ушедших и оставшихся клиентов статистически значимо.
 
 
 # В основе критерия xи-квадрат лежит предположение о том, что если верна нулевая гипотеза, то дискретное биномиальное
@@ -103,6 +94,10 @@ print stats.chi2_contingency(control_states_pivot, correction=False)
 #      поправка сильно поменяла достигаемые уровни значимости.
 #    Достигаемые уровни значимости на наших данных, полученные с помощью критерия xи-квадрат с поправкой Йетса, в
 #      среднем получаются больше, чем соответствующие значения без поправки.
+#%%
+def chi_2_stat_correction(table):
+    return stats.chi2_contingency(table, correction=True)
+print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_correction)))
 
 
 # Что если у нас мало данных, мы не хотим использовать аппроксимацию дискретного распределения непрерывным и
@@ -147,7 +142,11 @@ print stats.chi2_contingency(control_states_pivot, correction=False)
 #      xи-квадрат без поправки
 #    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем большие, чем
 #      xи-квадрат с поправкой Йетса
-
+#%%
+def fisher_exact_stat(table):
+    return stats.fisher_exact(table, alternative="two-sided")
+fisher_stats = calculate_pairwise_diffs(control_states_pivot, states, fisher_exact_stat)
+print len(filter(lambda stat: stat[1] < 0.05, fisher_stats))
 
 # Давайте попробуем применить полученные знания о разных видах корреляции и ее применимости на практике.
 # Рассмотрим пару признаков day_calls и mes_estim. Посчитайте корреляцию Пирсона между этими признаками на всех
