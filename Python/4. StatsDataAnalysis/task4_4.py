@@ -41,7 +41,7 @@ control_states_pivot
 #%%
 not_enough_data_count = len(filter(lambda val: val < 5, control_states_pivot.loc[:,[False, True]].values))
 not_enough_data_count += len(filter(lambda val: val < 5, control_states_pivot.loc[:,[True, False]].values))
-not_enough_data_count
+print "Count of cells where is not enough data is %i. The percent of these cells is %.2f%%" % (not_enough_data_count, float(not_enough_data_count)/(control_states_pivot.shape[0]*control_states_pivot.shape[1])*100)
 #%%
 from scipy import stats
 def calculate_pairwise_diffs(pivot_table, states, stat_calculator):
@@ -57,7 +57,8 @@ def calculate_pairwise_diffs(pivot_table, states, stat_calculator):
 #%%
 def chi_2_stat_no_correction(table):
     return stats.chi2_contingency(table, correction=False)
-print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_no_correction)))
+chi_2_stats = calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_no_correction)
+print "A number of cells where p-value is less than 0.05 for chi-square criterion: %i" % len(filter(lambda stat: stat[1] < 0.05, chi_2_stats))
 # Какие проблемы Вы видите в построении анализа из первого вопроса? Отметьте все верные утверждения. 
 #    Интерпретация числа достигаемых уровней значимости, меньших α=0.05, некорректна, поскольку не сделана поправка
 #      на множественную проверку гипотез.
@@ -84,20 +85,20 @@ print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_s
 # Проведите те же самые сравнения, что и в вопросе №1, только с включенной коррекцией
 #    scipy.stats.chi2_contingency(subtable, correction=True)
 # и сравните полученные результаты, отметив все верные варианты.
-#    Количество достигаемых уровней значимости, меньших, чем 0.05, в точности равно нулю. То есть поправка увеличила
-#      достигаемые уровни значимости настолько, что больше ни одно из значений достигаемого уровня значимости не
-#      попадает в диапазон от 0 до 0.05.
-#    Поправка Йетса на непрерывность всегда увеличивает значение достигаемого уровня значимости, поэтому все
-#      получившиеся значения достигаемого уровня значимости строго больше или равны таковым значениям при отсутствии
-#      этой поправки.
-#    Количество достигаемых уровней значимости, меньших, чем 0.05, почти не изменилось, нельзя сказать, что введенная
-#      поправка сильно поменяла достигаемые уровни значимости.
-#    Достигаемые уровни значимости на наших данных, полученные с помощью критерия xи-квадрат с поправкой Йетса, в
-#      среднем получаются больше, чем соответствующие значения без поправки.
 #%%
 def chi_2_stat_correction(table):
     return stats.chi2_contingency(table, correction=True)
-print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_correction)))
+chi_2_corrected_stats = calculate_pairwise_diffs(control_states_pivot, states, chi_2_stat_correction)
+print "A number of cells where p-value is less than 0.05 for chi-square criterion with correction: %i" % len(filter(lambda stat: stat[1] < 0.05, chi_2_corrected_stats))
+#    Количество достигаемых уровней значимости, меньших, чем 0.05, в точности равно нулю. То есть поправка увеличила
+#      достигаемые уровни значимости настолько, что больше ни одно из значений достигаемого уровня значимости не
+#      попадает в диапазон от 0 до 0.05.
+corrected_stats_greater_count = len(filter(lambda(stat, corrected): corrected[1] > stat[1], zip(chi_2_stats, chi_2_corrected_stats)))
+corrected_stats_less_count = len(filter(lambda(stat, corrected): corrected[1] < stat[1], zip(chi_2_stats, chi_2_corrected_stats)))
+print "A number of corrected stats where p-value is greater than p-value without correction is %i. Percentage: %.2f" % (corrected_stats_greater_count, float(corrected_stats_greater_count)/len(chi_2_stats)*100)
+print "A number of corrected stats where p-value is less than p-value without correction is %i. Percentage: %.2f" % (corrected_stats_less_count, float(corrected_stats_less_count)/len(chi_2_stats)*100)
+#    Достигаемые уровни значимости на наших данных, полученные с помощью критерия xи-квадрат с поправкой Йетса, в
+#      среднем получаются больше, чем соответствующие значения без поправки.
 
 
 # Что если у нас мало данных, мы не хотим использовать аппроксимацию дискретного распределения непрерывным и
@@ -112,7 +113,7 @@ print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_s
 #             Σ         a+c         b+d    n=a+b+c+d
 # Тогда вероятность получить именно такие a,b,c,d при фиксированных значениях сумм по строкам и по столбцам) задается
 # выражением
-#    p=((a+b)/a)((c+d)/c)/(n/(a+c)) = (a+b)!(c+d)!(a+c)!(b+d)!/(a! b! c! d! n!)
+#    p=(a+b)!(c+d)!(a+c)!(b+d)!/(a! b! c! d! n!)
 # В числителе этой дроби стоит суммарное количество способов выбрать a и c из a+b и c+d соответственно.
 # А в знаменателе — количество способов выбрать число объектов, равное сумме элементов первого столбца a+c из общего
 # количества рассматриваемых объектов n.
@@ -129,6 +130,19 @@ print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_s
 # Точный критерий Фишера удобно вычислять с помощью функции
 #     scipy.stats.fisher_exact
 # которая принимает на вход таблицу сопряженности 2x2.
+#%%
+def fisher_exact_stat(table):
+    return stats.fisher_exact(table, alternative="two-sided")
+fischer_stats = calculate_pairwise_diffs(control_states_pivot, states, fisher_exact_stat)
+fischer_stats_greater_count_c = len(filter(lambda(corrected, fischer): fischer[1] > corrected[1], zip(chi_2_corrected_stats, fischer_stats)))
+fischer_stats_less_count_c = len(filter(lambda(corrected, fischer): fischer[1] < corrected[1], zip(chi_2_corrected_stats, fischer_stats)))
+fischer_stats_greater_count = len(filter(lambda(stat, fischer): fischer[1] > stat[1], zip(chi_2_stats, fischer_stats)))
+fischer_stats_less_count = len(filter(lambda(stat, fischer): fischer[1] < stat[1], zip(chi_2_stats, fischer_stats)))
+print "A number of cells where p-value is less than 0.05 for Fischer criterion: %i" % len(filter(lambda stat: stat[1] < 0.05, fisher_stats))
+print "A number of Fischer stats where p-value is greater than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_greater_count_c, float(fischer_stats_greater_count_c)/len(fisher_stats)*100)
+print "A number of Fischer stats where p-value is less than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_less_count_c, float(fischer_stats_less_count_c)/len(fisher_stats)*100)
+print "A number of Fischer stats where p-value is greater than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_greater_count, float(fischer_stats_greater_count)/len(fisher_stats)*100)
+print "A number of Fischer stats where p-value is less than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_less_count, float(fischer_stats_less_count)/len(fisher_stats)*100)
 #    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем значительно большие,
 #      чем xи-квадрат без поправки
 #    Точный критерий Фишера точно также, как и критерий xи-квадрат, нельзя использовать, если наблюдений < 40 и если
@@ -142,11 +156,6 @@ print len(filter(lambda stat: stat[1] < 0.05, calculate_pairwise_diffs(control_s
 #      xи-квадрат без поправки
 #    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем большие, чем
 #      xи-квадрат с поправкой Йетса
-#%%
-def fisher_exact_stat(table):
-    return stats.fisher_exact(table, alternative="two-sided")
-fisher_stats = calculate_pairwise_diffs(control_states_pivot, states, fisher_exact_stat)
-print len(filter(lambda stat: stat[1] < 0.05, fisher_stats))
 
 # Давайте попробуем применить полученные знания о разных видах корреляции и ее применимости на практике.
 # Рассмотрим пару признаков day_calls и mes_estim. Посчитайте корреляцию Пирсона между этими признаками на всех
