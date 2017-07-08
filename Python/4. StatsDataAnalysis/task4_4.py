@@ -2,10 +2,11 @@
 # В этом задании вам предлагается проанализировать данные одной из американских телекоммуникационных компаний о
 # пользователях, которые потенциально могут уйти.
 #%%
+%pylab inline
 import pandas as pd
 import numpy as np
 
-frame = pd.read_csv("..\..\Data\churn_analysis.csv", sep=",", header=0)
+frame = pd.read_csv("churn_analysis.csv", sep=",", header=0)
 frame.head()
 # Измерены следующие признаки:
 #    state — штат США
@@ -37,7 +38,6 @@ frame.head()
 control_group = frame[frame["treatment"] == 1]
 states = list(set(control_group["state"].values))
 control_states_pivot = pd.pivot_table(control_group, values=["treatment"], index=["state"], columns=["churn"], fill_value = 0, aggfunc='count')
-control_states_pivot
 #%%
 not_enough_data_count = len(filter(lambda val: val < 5, control_states_pivot.loc[:,[False, True]].values))
 not_enough_data_count += len(filter(lambda val: val < 5, control_states_pivot.loc[:,[True, False]].values))
@@ -54,6 +54,18 @@ def calculate_pairwise_diffs(pivot_table, states, stat_calculator):
             chi_2_stat = stat_calculator(pivot_table.loc[[first_state,second_state],:])
             result.append(chi_2_stat)
     return result
+def stats_compare_plot(control_stat, validate_stat):
+    sorted_stats,sorted_stats_corrected = zip(*sorted(
+        map(
+            lambda (stat, c_stat): (stat[1],c_stat[1]),
+            zip(control_stat,validate_stat)),
+        key=(lambda (stat, c_stat): stat)))
+    sorted_stats_x,sorted_stats_y=zip(*enumerate(sorted_stats))
+    sorted_stats_corrected_x,sorted_stats_corrected_y=zip(*enumerate(sorted_stats_corrected))
+    pylab.xlim(0,len(sorted_stats))
+    pylab.scatter(sorted_stats_x, sorted_stats_y, color="r", alpha=.5)
+    pylab.scatter(sorted_stats_corrected_x, sorted_stats_corrected_y, color="g", alpha=.5)
+    pylab.show()
 #%%
 def chi_2_stat_no_correction(table):
     return stats.chi2_contingency(table, correction=False)
@@ -95,6 +107,7 @@ print "A number of cells where p-value is less than 0.05 for chi-square criterio
 #      попадает в диапазон от 0 до 0.05.
 corrected_stats_greater_count = len(filter(lambda(stat, corrected): corrected[1] > stat[1], zip(chi_2_stats, chi_2_corrected_stats)))
 corrected_stats_less_count = len(filter(lambda(stat, corrected): corrected[1] < stat[1], zip(chi_2_stats, chi_2_corrected_stats)))
+stats_compare_plot(chi_2_stats, chi_2_corrected_stats)
 print "A number of corrected stats where p-value is greater than p-value without correction is %i. Percentage: %.2f" % (corrected_stats_greater_count, float(corrected_stats_greater_count)/len(chi_2_stats)*100)
 print "A number of corrected stats where p-value is less than p-value without correction is %i. Percentage: %.2f" % (corrected_stats_less_count, float(corrected_stats_less_count)/len(chi_2_stats)*100)
 #    Достигаемые уровни значимости на наших данных, полученные с помощью критерия xи-квадрат с поправкой Йетса, в
@@ -138,24 +151,20 @@ fischer_stats_greater_count_c = len(filter(lambda(corrected, fischer): fischer[1
 fischer_stats_less_count_c = len(filter(lambda(corrected, fischer): fischer[1] < corrected[1], zip(chi_2_corrected_stats, fischer_stats)))
 fischer_stats_greater_count = len(filter(lambda(stat, fischer): fischer[1] > stat[1], zip(chi_2_stats, fischer_stats)))
 fischer_stats_less_count = len(filter(lambda(stat, fischer): fischer[1] < stat[1], zip(chi_2_stats, fischer_stats)))
-print "A number of cells where p-value is less than 0.05 for Fischer criterion: %i" % len(filter(lambda stat: stat[1] < 0.05, fisher_stats))
-print "A number of Fischer stats where p-value is greater than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_greater_count_c, float(fischer_stats_greater_count_c)/len(fisher_stats)*100)
-print "A number of Fischer stats where p-value is less than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_less_count_c, float(fischer_stats_less_count_c)/len(fisher_stats)*100)
-print "A number of Fischer stats where p-value is greater than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_greater_count, float(fischer_stats_greater_count)/len(fisher_stats)*100)
-print "A number of Fischer stats where p-value is less than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_less_count, float(fischer_stats_less_count)/len(fisher_stats)*100)
-#    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем значительно большие,
-#      чем xи-квадрат без поправки
-#    Точный критерий Фишера точно также, как и критерий xи-квадрат, нельзя использовать, если наблюдений < 40 и если
-#      ожидаемое значение меньше 5 больше чем в 20% ячейках.
+print "A number of cells where p-value is less than 0.05 for Fischer criterion: %i" % len(filter(lambda stat: stat[1] < 0.05, fischer_stats))
+stats_compare_plot(chi_2_corrected_stats, fischer_stats)
+print "A number of Fischer stats where p-value is greater than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_greater_count_c, float(fischer_stats_greater_count_c)/len(fischer_stats)*100)
+print "A number of Fischer stats where p-value is less than p-value chi-square with correction is %i. Percentage: %.2f" % (fischer_stats_less_count_c, float(fischer_stats_less_count_c)/len(fischer_stats)*100)
+stats_compare_plot(chi_2_stats, fischer_stats)
+print "A number of Fischer stats where p-value is greater than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_greater_count, float(fischer_stats_greater_count)/len(fischer_stats)*100)
+print "A number of Fischer stats where p-value is less than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_less_count, float(fischer_stats_less_count)/len(fischer_stats)*100)
+avg_diff = np.average(map(lambda (chi2_stat, fischer_stat): fischer_stat[1]-chi2_stat[1], zip(chi_2_stats,fischer_stats)))
+print "Average difference between chi2 stat and fischer stat is %.4f" % avg_diff
 #    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем меньшие, чем
 #      xи-квадрат с поправкой Йетса
 #    Точный критерий Фишера всегда лучше, чем критерий xи-квадрат, потому что не использует аппроксимацию дискретного
 #      распределения непрерывным. Однако при увеличении размера выборки его преимущества по сравнению с критерем
 #      xи-квадрат уменьшаются, в пределе достигая нуля.
-#    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем меньшие, чем
-#      xи-квадрат без поправки
-#    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем большие, чем
-#      xи-квадрат с поправкой Йетса
 
 # Давайте попробуем применить полученные знания о разных видах корреляции и ее применимости на практике.
 # Рассмотрим пару признаков day_calls и mes_estim. Посчитайте корреляцию Пирсона между этими признаками на всех
