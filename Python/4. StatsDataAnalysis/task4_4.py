@@ -37,7 +37,13 @@ frame.head()
 #%%
 control_group = frame[frame["treatment"] == 1]
 states = list(set(control_group["state"].values))
-control_states_pivot = pd.pivot_table(control_group, values=["treatment"], index=["state"], columns=["churn"], fill_value = 0, aggfunc='count')
+control_states_pivot = pd.pivot_table(
+    control_group,
+    values=["treatment"],
+    index=["state"],
+    columns=["churn"],
+    fill_value = 0,
+    aggfunc='count')
 #%%
 not_enough_data_count = len(filter(lambda val: val < 5, control_states_pivot.loc[:,[False, True]].values))
 not_enough_data_count += len(filter(lambda val: val < 5, control_states_pivot.loc[:,[True, False]].values))
@@ -160,58 +166,64 @@ print "A number of Fischer stats where p-value is greater than p-value chi-squar
 print "A number of Fischer stats where p-value is less than p-value chi-square is %i. Percentage: %.2f" % (fischer_stats_less_count, float(fischer_stats_less_count)/len(fischer_stats)*100)
 avg_diff = np.average(map(lambda (chi2_stat, fischer_stat): fischer_stat[1]-chi2_stat[1], zip(chi_2_stats,fischer_stats)))
 print "Average difference between chi2 stat and fischer stat is %.4f" % avg_diff
-#    Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем меньшие, чем
-#      xи-квадрат с поправкой Йетса
-#    Точный критерий Фишера всегда лучше, чем критерий xи-квадрат, потому что не использует аппроксимацию дискретного
-#      распределения непрерывным. Однако при увеличении размера выборки его преимущества по сравнению с критерем
-#      xи-квадрат уменьшаются, в пределе достигая нуля.
+# Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем меньшие, чем xи-квадрат с поправкой Йетса
+# Точный критерий Фишера на наших данных дает значения достигаемого уровня значимости в среднем значительно большие, чем xи-квадрат без поправки
+# Точный критерий Фишера всегда лучше, чем критерий xи-квадрат, потому что не использует аппроксимацию дискретного распределения непрерывным.
+#   Однако при увеличении размера выборки его преимущества по сравнению с критерем xи-квадрат уменьшаются, в пределе достигая нуля.
 
 # Давайте попробуем применить полученные знания о разных видах корреляции и ее применимости на практике.
 # Рассмотрим пару признаков day_calls и mes_estim. Посчитайте корреляцию Пирсона между этими признаками на всех
 # данных, ее значимость.
+#%%
+from scipy.stats import t
+def student_criterion(correlation, count):
+    corr = float(np.abs(correlation))
+    cnt = float(count)
+    stat = corr*np.sqrt(cnt-2.)/np.sqrt(1.-corr**2.)
+    return (stat,(1.-t.cdf(stat, cnt-2))*2.)
+#%%
+pearson_corr = np.round(frame.corr(method="pearson")["day_calls"]["mes_estim"],4)
+count = frame.shape[0]
+pearson_stat,pearson_p_value = student_criterion(pearson_corr, count)
+
+print "Pearson correlation for \"day_calls\" and \"mes_estim\" features: %.4f\tp-value: %.4f" % (np.round(pearson_corr,4), np.round(pearson_p_value,4))
+
 # Отметьте все верные утверждения.
-#    Корреляция Пирсона имеет положительный знак, и отличие корреляции от нуля на уровне доверия 0.05 значимо.
-#    Корреляция Пирсона имеет положительный знак, и отличие корреляции от нуля на уровне доверия 0.05 не значимо. 
-#    Все варианты неверны, потому что значимость корреляции Пирсона можно оценивать только для нормального
-#      распределения, как и упоминалось в лекциях.
 #    Корреляция Пирсона имеет отрицательный знак, и отличие корреляции от нуля на уровне доверия 0.05 значимо.
-#    Корреляция Пирсона имеет отрицательный знак, и отличие корреляции от нуля на уровне доверия 0.05 не значимо.
 
 
 # Еще раз рассмотрим пару признаков day_calls и mes_estim. Посчитайте корреляцию Спирмена между этими признаками на
 # всех данных, ее значимость.
+#%%
+spearman_corr = frame.corr(method="spearman")["day_calls"]["mes_estim"]
+spearman_stat,spearman_p_value = student_criterion(spearman_corr, count)
+print "Spearman correlation for \"day_calls\" and \"mes_estim\" features: %.4f\tp-value: %.4f" % (np.round(spearman_corr,4),np.round(spearman_p_value,4))
 # Отметьте все верные утверждения.
-#    Корреляция Спирмена имеет положительный знак, и отличие корреляции от нуля на уровне доверия 0.05 не значимо.
 #    Корреляция Спирмена имеет положительный знак, и отличие корреляции от нуля на уровне доверия 0.05 значимо.
-#    Корреляция Спирмена имеет отрицательный знак, и отличие корреляции от нуля на уровне доверия 0.05 значимо.
-#    Корреляция Спирмена тут неприменима, поскольку речь идет о непрерывных величинах, а корреляция Спирмена
-#      применяется к выборочным рангам двух выборок.
-#    Корреляция Спирмена имеет отрицательный знак, и отличие корреляции от нуля на уровне доверия 0.05 не значимо.
 
 
 # Как можно интерпретировать полученные значения коэффициентов корреляции и достигаемые уровни значимости при проверки
 # гипотез о равенстве нулю этих коэффициентов?
-#    Не стоит ориентироваться на значение корреляции Спирмена, потому что корреляцию Спирмена можно считать только
-#      тогда, когда оба признака дискретные и между значениями можно установить строгий порядок.
-#    Предположение нормальности данных двух признаков не выполнено, что хорошо видно на ку-ку графике, поэтому
-#      корреляция Пирсона может быть полностью неадекватна.
 #    Посчитанные корреляции и их значимости говорят лишь о том, что необходимо взглянуть на данные глазами и
 #      попытаться понять, что приводит к таким (противоречивым?) результатам.
-#    Подсчет корреляций не имеет особого смысла, поскольку корреляция ничего не говорит о том, какая на самом деле
-#      зависимость имеется между признаками.
 
 
 # Посчитайте значение коэффицента корреляции Крамера между двумя признаками: штатом (state) и оттоком пользователей
 # (churn) для всех пользователей, которые находились в контрольной группе (treatment=1). Что можно сказать о
 # достигаемом уровне значимости при проверке гипотезы о равенство нулю этого коэффициента?
-#    Достигаемый уровень значимости < 0.05, то есть, отличие от нуля значения коэффицента Крамера значимо.
-#    Достигаемый уровень значимости > 0.05, то есть, отличие от нуля значения коэффицента Крамера незначимо.
+#%%
+from scipy.stats import chi2_contingency
+contingency_table = control_states_pivot.as_matrix()
+def v_Cramer_correlation(table):
+    chi_stat = chi2_contingency(table)[0]
+    k_min = np.min(table.shape)
+    n = np.sum(table)
+    return np.sqrt(chi_stat/(n*(k_min-1)))
+cramer_correlation = v_Cramer_correlation(contingency_table)
+cramer_p_value = chi2_contingency(contingency_table)[1]
+print "V-Cramer correlation for \"state\" and \"churn\" features is %.4f\tp-value: %.4f" % (np.round(cramer_correlation,4), np.round(cramer_p_value, 4))
 #    Для вычисления коэффициента Крамера используется значение статистики xи-квадрат, на которую мы не можем
 #      положиться применительно к нашим данным.
-#    Коэффициент корреляции Крамера не может быть использован для сравнения связи этих двух признаков, потому что он
-#      используется для таблиц сопряженности, где каждая из размерностей больше двух. Если хотя бы одна из
-#      размерностей равна 2, то нужно использовать коэффициент корреляции Мэтьюса.
-
 
 # Вы прослушали большой курс и к текущему моменту обладете достаточными знаниями, чтобы попытаться самостоятельно
 # выбрать нужный метод/инструмент/статистический критерий и сделать правильное заключение.
@@ -222,10 +234,80 @@ print "Average difference between chi2 stat and fischer stat is %.4f" % avg_diff
 # Каким бы методом вы бы посоветовали воспользоваться компании?
 # Не забудьте про поправку на множественную проверку! И не пользуйтесь односторонними альтернативами, поскольку вы не
 # знаете, к каким действительно последствиям приводят тестируемые методы (treatment = 0, treatment = 2)!
-#    Ни один из методов не показал значительного улучшения относительно других, о чем говорит групповой статистический
-#      критерий. 
-#    treatment = 0 статистически значимо отличается от контрольной группы treatment = 1
+#%%
+from statsmodels.stats.proportion import proportion_confint
+strategy_0_group = frame[frame["treatment"] == 0]
+strategy_0_group_left = strategy_0_group[strategy_0_group["churn"] == "True."]
+strategy_2_group = frame[frame["treatment"] == 2]
+strategy_2_group_left = strategy_2_group[strategy_2_group["churn"] == "True."]
+control_group_left = control_group[control_group["churn"] == "True."]
+str_0_left_count = float(len(strategy_0_group_left))
+str_0_count = float(len(strategy_0_group))
+strategy_0_proportion = str_0_left_count/str_0_count
+str_2_left_count = float(len(strategy_2_group_left))
+str_2_count = float(len(strategy_2_group))
+strategy_2_proportion = str_2_left_count/str_2_count
+control_left_count = float(len(control_group_left))
+control_count = float(len(control_group))
+control_proportion = control_left_count/control_count
+str_0_confint = proportion_confint(str_0_left_count, str_0_count, alpha=0.05, method="normal")
+str_2_confint = proportion_confint(str_2_left_count, str_2_count, alpha=0.05, method="normal")
+control_confint = proportion_confint(control_left_count, control_count, alpha=0.05, method="normal")
+print "Strategy 0 proportion: %.4f\tConfidential interval: %s" % (strategy_0_proportion,str_0_confint)
+print "Strategy 2 proportion: %.4f\tConfidential interval: %s" % (strategy_2_proportion,str_2_confint)
+print "Control proportion: %.4f\tConfidential interval: %s" % (control_proportion,control_confint)
+
+#%%
+def proportions_diff_z_stat_ind(sample1, sample2):
+    n1 = len(sample1)
+    n2 = len(sample2)
+    
+    p1 = float(sum(sample1)) / n1
+    p2 = float(sum(sample2)) / n2 
+    P = float(p1*n1 + p2*n2) / (n1 + n2)
+    
+    return (p1 - p2) / np.sqrt(P * (1 - P) * (1. / n1 + 1. / n2))
+
+def proportions_diff_z_test(sample1, sample2, alternative = "two-sided"):
+    if alternative not in ("two-sided", "less", "greater"):
+        raise ValueError("alternative not recognized\n"
+                         "should be \"two-sided\", \"less\" or \"greater\"")
+    z_stat = proportions_diff_z_stat_ind(sample1, sample2)
+    p_value = 0
+    if alternative == 'two-sided':
+        p_value = 2 * (1 - stats.norm.cdf(np.abs(z_stat)))
+    elif alternative == 'less':
+        p_value = stats.norm.cdf(z_stat)
+    elif alternative == 'greater':
+        p_value = 1 - stats.norm.cdf(z_stat)
+
+    return (z_stat,p_value)
+#%%
+str_0_left_churns = map(lambda x: 1. if x == "True." else 0., strategy_0_group["churn"].as_matrix())
+str_2_left_churns = map(lambda x: 1. if x == "True." else 0., strategy_2_group["churn"].as_matrix())
+control_left_churns = map(lambda x: 1. if x == "True." else 0., control_group["churn"].as_matrix())
+str_0_control_test = proportions_diff_z_test(
+    str_0_left_churns,
+    control_left_churns)
+str_0_str_2_test = proportions_diff_z_test(
+    str_0_left_churns,
+    str_2_left_churns
+)
+str_2_control_test = proportions_diff_z_test(
+    str_2_left_churns,
+    control_left_churns
+)
+print str_0_control_test
+print str_2_control_test
+print str_0_str_2_test
+#%%
+from statsmodels.sandbox.stats.multicomp import multipletests
+p_values = multipletests(
+    [str_0_control_test[1], str_2_control_test[1], str_0_str_2_test[1]],
+    alpha = 0.05,
+    method = "fdr_bh")[1]
+print "Strategy 0 vs control strategy p-value:%.4f" % p_values[0]
+print "Strategy 2 vs control strategy p-value:%.4f" % p_values[1]
+print "Strategy 0 vs strategy 2 p-value:%.4f" % p_values[2]
 #    treatment = 2 статистически значимо отличается от контрольной группы treatment = 1
-#    В дальнейшем телеком компании рекомендуется использовать и treatment = 0, и treatment = 2 для наибольшей
-#      эффективности удержения абонентов.
 #    Отличие между treatment = 0 и treatment = 2 относительно влияния на уровень churn статистически незначимо.
