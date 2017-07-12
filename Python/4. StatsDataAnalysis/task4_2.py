@@ -12,11 +12,62 @@
 #    BILL_AMT1 - BILL_AMT6: задолженность, BILL_AMT6 - на апрель, BILL_AMT1 - на сентябрь
 #    PAY_AMT1 - PAY_AMT6: сумма уплаченная в PAY_AMT6 - апреле, ..., PAY_AMT1 - сентябре
 #    default - индикатор невозврата денежных средств
+#%%
+%pylab inline
+import pandas as pd
+import numpy as np
+
+frame = pd.read_csv("..\..\Data\credit_card_default_analysis.csv", sep=",", header=0)
+frame.head()
 
 # Задание
 #    Размер кредитного лимита (LIMIT_BAL).
 #       В двух группах, тех людей, кто вернул кредит (default = 0) и тех, кто его не вернул (default = 1) проверьте гипотезы:
 #       a) о равенстве медианных значений кредитного лимита с помощью подходящей интервальной оценки
+#%%
+def get_bootstrap_samples(data, n_samples):
+    data_length = len(data)
+    indices = np.random.randint(0, data_length, (n_samples, data_length))
+    return data[indices]
+def stat_intervals(stat, alpha):
+    boundaries = np.percentile(stat, [100 * alpha / 2., 100 * (1 - alpha / 2.)])
+    return boundaries
+def calculate_median_confidence_interval(data, samples_count = 1000, alpha = 0.05):
+    median = np.median(data)
+    medians = map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(data, samples_count))
+    confint = stat_intervals(medians, alpha)
+    return (median, confint)
+#%%
+default_group = frame[frame["default"] == 1]
+success_group = frame[frame["default"] == 0]
+default_group_limits = default_group["LIMIT_BAL"].as_matrix()
+success_group_limits = success_group["LIMIT_BAL"].as_matrix()
+#%%
+pylab.ylabel("LIMIT_BAL")
+pylab.plot(sorted(list(set(success_group_limits))), label="Success limits")
+pylab.plot(sorted(list(set(default_group_limits))), label="Default limits")
+pylab.legend()
+pylab.show()
+#%%
+samples_count = 1000
+alpha = 0.05
+default_limit_confint = calculate_median_confidence_interval(default_group_limits, samples_count, alpha)
+success_limit_confint = calculate_median_confidence_interval(success_group["LIMIT_BAL"].as_matrix(), samples_count, alpha)
+median_deltas = map(
+    lambda (s_median,d_median): s_median-d_median,
+    zip(
+        map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(success_group["LIMIT_BAL"].as_matrix(), samples_count)),
+        map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(default_group["LIMIT_BAL"].as_matrix(), samples_count))
+    )
+)
+median_delta_confint = stat_intervals(median_deltas, alpha)
+print "Default limit max value: %.4f\tmin value: %.4f" % (np.max(default_group_limits), np.min(default_group_limits))
+print "Success limit max value: %.4f\tmin value: %.4f" % (np.max(success_group_limits), np.min(success_group_limits))
+print "Default median: %.4f\tConfidence interval: %s" % default_limit_confint
+print "Success median: %.4f\tConfidence interval: %s" % success_limit_confint
+print "Confidence interval for difference between \"default\" and \"success\" groups is %s" % median_delta_confint
+print u"Доверительный интервал для разницы кредитного лимита между \"success\" и \"default\" группами далеко отстоит от нуля."
+print u"Можно с уверенностью заявить, что кредитный лимит в группе \"success\" значимо выше."
 #       b) о равенстве распределений с помощью одного из подходящих непараметрических критериев проверки равенства средних.
 #       Значимы ли полученные результаты с практической точки зрения ?
 #    Пол (SEX):
