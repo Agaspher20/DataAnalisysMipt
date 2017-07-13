@@ -70,6 +70,13 @@ print u"Доверительный интервал для разницы кре
 print u"Можно с уверенностью заявить, что кредитный лимит в группе \"success\" значимо выше."
 #       b) о равенстве распределений с помощью одного из подходящих непараметрических критериев проверки равенства средних.
 #       Значимы ли полученные результаты с практической точки зрения ?
+#%%
+from scipy import stats
+print "Mann-Whitney criterion p-value:"
+print stats.mannwhitneyu(default_group_limits, success_group_limits, alternative="two-sided").pvalue
+print "Wilcoxon criterion p-value:"
+print stats.wilcoxon(
+    np.array(sorted(success_group_limits)[0:len(default_group_limits)])-np.array(sorted(default_group_limits))).pvalue
 #    Пол (SEX):
 #       Проверьте гипотезу о том, что гендерный состав группы людей вернувших и не вернувших кредит отличается.
 #       Хорошо, если вы предоставите несколько различных решений этой задачи (с помощью доверительного интервала и подходящего статистического критерия)
