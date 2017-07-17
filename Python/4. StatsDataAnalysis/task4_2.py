@@ -77,9 +77,56 @@ print stats.mannwhitneyu(default_group_limits, success_group_limits, alternative
 print "Wilcoxon criterion p-value:"
 print stats.wilcoxon(
     np.array(sorted(success_group_limits)[0:len(default_group_limits)])-np.array(sorted(default_group_limits))).pvalue
+
 #    Пол (SEX):
 #       Проверьте гипотезу о том, что гендерный состав группы людей вернувших и не вернувших кредит отличается.
 #       Хорошо, если вы предоставите несколько различных решений этой задачи (с помощью доверительного интервала и подходящего статистического критерия)
+#%%
+default_group_sex = default_group["SEX"].as_matrix()
+success_group_sex = success_group["SEX"].as_matrix()
+#%%
+def proportions_confint_diff(first_vector, second_vector, alpha = 0.05):
+    count1 = float(len(first_vector))
+    count2 = float(len(second_vector))
+    p1 = float(len(filter(lambda x: x == 1, first_vector)))/count1
+    p2 = float(len(filter(lambda x: x == 1, second_vector)))/count2
+    z = stats.norm.ppf(1. - alpha / 2.)
+
+    left_boundary = (p1 - p2) - z * np.sqrt(p1 * (1. - p1)/ count1 + p2 * (1 - p2)/ count2)
+    right_boundary = (p1 - p2) + z * np.sqrt(p1 * (1. - p1)/ count1 + p2 * (1 - p2)/ count2)
+    
+    return (left_boundary, right_boundary)
+
+def proportions_diff_z_stat_ind(sample1, sample2):
+    n1 = len(sample1)
+    n2 = len(sample2)
+    
+    p1 = float(len(filter(lambda x: x == 1, sample1))) / n1
+    p2 = float(len(filter(lambda x: x == 1, sample2))) / n2 
+    P = float(p1*n1 + p2*n2) / (n1 + n2)
+    
+    return (p1 - p2) / np.sqrt(P * (1 - P) * (1. / n1 + 1. / n2))
+
+def proportions_diff_z_test(sample1, sample2, alternative = 'two-sided'):
+    z_stat = proportions_diff_z_stat_ind(sample1, sample2)
+    if alternative not in ('two-sided', 'less', 'greater'):
+        raise ValueError("alternative not recognized\n"
+                         "should be 'two-sided', 'less' or 'greater'")
+    
+    if alternative == 'two-sided':
+        return 2 * (1 - stats.norm.cdf(np.abs(z_stat)))
+    
+    if alternative == 'less':
+        return stats.norm.cdf(z_stat)
+
+    if alternative == 'greater':
+        return 1 - stats.norm.cdf(z_stat)
+#%%
+print "Proportion confidential interval is [%.4f; %.4f]" % proportions_confint_diff(default_group_sex, success_group_sex)
+
+pvalue = proportions_diff_z_test(default_group_sex, success_group_sex, alternative='two-sided')
+print "p-value: ", pvalue
+
 #    Образование (EDUCATION):
 #       Проверьте гипотезу о том, что образование не влияет на то, вернет ли человек долг.
 #       Предложите способ наглядного представления разницы в ожидаемых и наблюдаемых значениях количества человек вернувших и не вернувших долг.
