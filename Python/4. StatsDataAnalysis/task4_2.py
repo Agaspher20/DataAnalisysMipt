@@ -136,7 +136,21 @@ print "p-value: ", pvalue
 #       Наличие какого образования является наилучшим индикатором того, что человек отдаст долг?
 #       Наоборот, не отдаст долг?
 #%%
-print "Spearman correlation education-default: %.4f" % frame.corr(method="spearman")["EDUCATION"]["default"]
+success_group_edu = success_group["EDUCATION"].as_matrix()
+default_group_edu = default_group["EDUCATION"].as_matrix()
+pylab.hist([success_group_edu, default_group_edu], 7, label = ["Success", "Default"])
+pylab.legend()
+pylab.show()
+for edu_type in [(0,"doctor"),(1,"master"),(2,"bachelor"),(3,"scholar"),(4,"basic"),(5,"other"),(6,"n/a")]:
+    success_edu_count = float(len(filter(lambda val: val == edu_type[0], success_group_edu)))
+    default_edu_count = float(len(filter(lambda val: val == edu_type[0], default_group_edu)))
+    overall_count = success_edu_count+default_edu_count
+    if overall_count > 0:    
+        pylab.bar(edu_type[0], success_edu_count/overall_count, label = (edu_type[1] + (" success (%.0f)" % success_edu_count)))
+        pylab.bar(edu_type[0], default_edu_count/overall_count, label = (edu_type[1] + (" default (%.0f)" % default_edu_count)))
+pylab.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+pylab.show()
+#%%
 #    Семейное положение (MARRIAGE):
 #       Проверьте, как связан семейный статус с индикатором дефолта:
 #           нужно предложить меру, по которой можно измерить возможную связь этих переменных и посчитать ее значение.
