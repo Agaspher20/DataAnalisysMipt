@@ -6,7 +6,7 @@
 import pandas as pd
 import numpy as np
 
-frame = pd.read_csv("churn_analysis.csv", sep=",", header=0)
+frame = pd.read_csv("..\..\Data\churn_analysis.csv", sep=",", header=0)
 frame.head()
 # Измерены следующие признаки:
 #    state — штат США
