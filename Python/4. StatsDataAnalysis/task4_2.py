@@ -140,17 +140,33 @@ success_group_edu = success_group["EDUCATION"].as_matrix()
 default_group_edu = default_group["EDUCATION"].as_matrix()
 pylab.hist([success_group_edu, default_group_edu], 7, label = ["Success", "Default"])
 pylab.legend()
-pylab.show()
-for edu_type in [(0,"doctor"),(1,"master"),(2,"bachelor"),(3,"scholar"),(4,"basic"),(5,"other"),(6,"n/a")]:
-    success_edu_count = float(len(filter(lambda val: val == edu_type[0], success_group_edu)))
-    default_edu_count = float(len(filter(lambda val: val == edu_type[0], default_group_edu)))
+#%%
+education_groups = ["doctor","master","bachelor","scholar","basic","other","n/a"]
+edu_contingency_table = pd.pivot_table(
+    frame[["EDUCATION", "default", "LIMIT_BAL"]],
+    values=["LIMIT_BAL"],
+    index=["EDUCATION"],
+    columns=["default"],
+    fill_value = 0,
+    aggfunc='count').as_matrix()
+for (edu_type_index,edu_type_name) in enumerate(education_groups):
+    success_edu_count = float(edu_contingency_table[edu_type_index][0])
+    default_edu_count = float(edu_contingency_table[edu_type_index][1])
     overall_count = success_edu_count+default_edu_count
     if overall_count > 0:    
-        pylab.bar(edu_type[0], success_edu_count/overall_count, label = (edu_type[1] + (" success (%.0f)" % success_edu_count)))
-        pylab.bar(edu_type[0], default_edu_count/overall_count, label = (edu_type[1] + (" default (%.0f)" % default_edu_count)))
+        pylab.bar(edu_type_index, success_edu_count/overall_count, label = (edu_type_name + (" success (%.0f)" % success_edu_count)))
+        pylab.bar(edu_type_index, default_edu_count/overall_count, label = (edu_type_name + (" default (%.0f)" % default_edu_count)))
 pylab.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 pylab.show()
 #%%
+def v_Cramer_correlation(table):
+    chi_stat = stats.chi2_contingency(table)[0]
+    k_min = np.min(table.shape)
+    n = np.sum(table)
+    return np.sqrt(chi_stat/(n*(k_min-1)))
+#%%
+print "V-Cramer statistic is: %.4f" % v_Cramer_correlation(edu_contingency_table)
+print "p-value:", stats.chi2_contingency(edu_contingency_table)[1]
 #    Семейное положение (MARRIAGE):
 #       Проверьте, как связан семейный статус с индикатором дефолта:
 #           нужно предложить меру, по которой можно измерить возможную связь этих переменных и посчитать ее значение.
