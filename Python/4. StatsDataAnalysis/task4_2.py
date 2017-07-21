@@ -25,6 +25,7 @@ frame.head()
 #       В двух группах, тех людей, кто вернул кредит (default = 0) и тех, кто его не вернул (default = 1) проверьте гипотезы:
 #       a) о равенстве медианных значений кредитного лимита с помощью подходящей интервальной оценки
 #%%
+from scipy import stats
 def get_bootstrap_samples(data, n_samples):
     data_length = len(data)
     indices = np.random.randint(0, data_length, (n_samples, data_length))
@@ -37,6 +38,15 @@ def calculate_median_confidence_interval(data, samples_count = 1000, alpha = 0.0
     medians = map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(data, samples_count))
     confint = stat_intervals(medians, alpha)
     return (median, confint)
+def compare_distributions(data1, data2, samples_count, alpha):
+    median_deltas = map(
+        lambda (s_median,d_median): s_median-d_median,
+        zip(
+            map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(data1, samples_count)),
+            map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(data2, samples_count))
+        )
+    )
+    return stat_intervals(median_deltas, alpha)
 #%%
 default_group = frame[frame["default"] == 1]
 success_group = frame[frame["default"] == 0]
@@ -52,15 +62,8 @@ pylab.show()
 samples_count = 1000
 alpha = 0.05
 default_limit_confint = calculate_median_confidence_interval(default_group_limits, samples_count, alpha)
-success_limit_confint = calculate_median_confidence_interval(success_group["LIMIT_BAL"].as_matrix(), samples_count, alpha)
-median_deltas = map(
-    lambda (s_median,d_median): s_median-d_median,
-    zip(
-        map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(success_group["LIMIT_BAL"].as_matrix(), samples_count)),
-        map(lambda samples_group: np.median(samples_group), get_bootstrap_samples(default_group["LIMIT_BAL"].as_matrix(), samples_count))
-    )
-)
-median_delta_confint = stat_intervals(median_deltas, alpha)
+success_limit_confint = calculate_median_confidence_interval(success_group_limits, samples_count, alpha)
+median_delta_confint = compare_distributions(success_group_limits, default_group_limits, samples_count, alpha)
 print "Default limit max value: %.4f\tmin value: %.4f" % (np.max(default_group_limits), np.min(default_group_limits))
 print "Success limit max value: %.4f\tmin value: %.4f" % (np.max(success_group_limits), np.min(success_group_limits))
 print "Default median: %.4f\tConfidence interval: %s" % default_limit_confint
@@ -71,7 +74,6 @@ print u"Можно с уверенностью заявить, что креди
 #       b) о равенстве распределений с помощью одного из подходящих непараметрических критериев проверки равенства средних.
 #       Значимы ли полученные результаты с практической точки зрения ?
 #%%
-from scipy import stats
 print "Mann-Whitney criterion p-value:"
 print stats.mannwhitneyu(default_group_limits, success_group_limits, alternative="two-sided").pvalue
 print "Wilcoxon criterion p-value:"
@@ -186,11 +188,36 @@ print "V-Cramer statistic is: %.4f" % v_Cramer_correlation(mar_contingency_table
 print "p-value:", stats.chi2_contingency(mar_contingency_table)[1]
 #    Возраст (AGE):
 #       Относительно двух групп людей вернувших и не вернувших кредит проверьте следующие гипотезы:
+#%%
+default_group_ages = default_group["AGE"].as_matrix()
+success_group_ages = success_group["AGE"].as_matrix()
+pylab.ylabel("AGE")
+pylab.plot(sorted(list(set(success_group_ages))), label="Success ages")
+pylab.plot(sorted(list(set(default_group_ages))), label="Default ages")
+pylab.legend()
+pylab.show()
 #       a) о равенстве медианных значений возрастов людей
+#%%
+default_ages_confint = calculate_median_confidence_interval(default_group_ages, samples_count, alpha)
+success_ages_confint = calculate_median_confidence_interval(success_group_ages, samples_count, alpha)
+median_delta_ages_confint = compare_distributions(success_group_ages, default_group_ages, samples_count, alpha)
+print "Default ages max value: %.4f\tmin value: %.4f" % (np.max(default_group_ages), np.min(default_group_ages))
+print "Success ages max value: %.4f\tmin value: %.4f" % (np.max(success_group_ages), np.min(success_group_ages))
+print "Default ages median: %.4f\tConfidence interval: %s" % default_ages_confint
+print "Success ages median: %.4f\tConfidence interval: %s" % success_ages_confint
+print "Confidence interval for difference between ages in \"default\" and \"success\" groups is %s" % median_delta_ages_confint
+print u"Доверительный интервал для разницы возрастов между \"success\" и \"default\" группами содержит ноль."
+print u"Гипотеза о равенстве возрастов в этих группах не отвергается."
 #       b) о равенстве распределений с помощью одного из подходящих непараметрических критериев проверки равенства средних.
-#       Значимы ли полученные результаты с практической точки зрения ?
+#%%
+print "Mann-Whitney criterion p-value:"
+print stats.mannwhitneyu(default_group_ages, success_group_ages, alternative="two-sided").pvalue
+print "Wilcoxon criterion p-value:"
+print stats.wilcoxon(
+    np.array(sorted(success_group_ages)[0:len(default_group_ages)])-np.array(sorted(default_group_ages))).pvalue
 
-#Review criteria
+#       Значимы ли полученные результаты с практической точки зрения ?
+# Review criteria
 #    Выполнение каждого пункта задания должно начинаться с графика с данными, которые вы собираетесь анализировать.
 #       Еще лучше, если вы разложите графики анализируемого фактора по переменной (default), на которую хотите изучить влияние этого фактора,
 #       и проинтерпретируете отличия в полученных распределениях.
