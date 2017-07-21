@@ -52,7 +52,6 @@ default_group = frame[frame["default"] == 1]
 success_group = frame[frame["default"] == 0]
 default_group_limits = default_group["LIMIT_BAL"].as_matrix()
 success_group_limits = success_group["LIMIT_BAL"].as_matrix()
-#%%
 pylab.ylabel("LIMIT_BAL")
 pylab.plot(sorted(list(set(success_group_limits))), label="Success limits")
 pylab.plot(sorted(list(set(default_group_limits))), label="Default limits")
