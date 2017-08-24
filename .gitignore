@@ -6,6 +6,8 @@ obj/
 .vscode/
 .ipynb_checkpoints/
 kernel-*.json
+__pycache__/
 Data/visualization_train.csv
 Data/lectures.txt
 Data/recipes.json
+Data/automobiles/
