@@ -20,7 +20,7 @@ import sys
 sys.path.append("DataAnalisysMipt\\Python\\5. DataAnalysisApplications")
 from task2_1_imagenet_classes import class_names
 from task2_1_model import vgg16
-import task2_1_result_functions
+import task2_1_result_functions as rf
 import glob
 import os
 import tensorflow as tf
@@ -46,3 +46,37 @@ vgg = vgg16(imgs, "DataAnalisysMipt\\Data\\automobiles\\vgg16_weights.npz", sess
 # классах.
 # Задание: Загрузите уверенность для первого класса для изображения train/00002.jpg с точностью до 1 знака после запятой
 # в файл с ответом.
+probabilities, predictions = rf.process_image(
+    "DataAnalisysMipt\\Data\\automobiles\\train\\00002.jpg",
+    sess,
+    vgg)
+for prediction in predictions[0:5]:
+    print(class_names[prediction], probabilities[prediction])
+#%%
+print(
+    "First class is %s. Its probability is %.1f"
+    % (class_names[predictions[0]], np.round(probabilities[predictions[0]], 1)))
+rf.save_answer_num("DataAnalisysMipt\\Results\\pa_5_2_1_1.txt",
+                   np.round(probabilities[predictions[0]], 1))
+
+# Задание 2.
+# Научитесь извлекать fc2 слой.
+# Для этого нужно модифицировать process_image, чтобы вместо последнего слоя извлекались выходы fc2.
+# Задание:
+# Посчитайте fc2 для картинки train/00002.jpg.
+# Запишите первые 20 компонент (каждое число с новой строки, т.е. в загружаемом файле должно получиться 20 строк).
+#%%
+def process_image_fc2(fname, sess, vgg):
+    """Функция обработки отдельного изображения"""
+    # Печатает метки TOP-5 классов и уверенность модели в каждом из них.
+    img1 = imread(fname, mode='RGB')
+    img1 = imresize(img1, (224, 224))
+
+    prob = sess.run(vgg.fc2, feed_dict={vgg.imgs: [img1]})[0]
+    return (prob, np.argsort(prob)[::-1])
+#%%
+probabilities_fc2, predictions_fc2 = process_image_fc2(
+    "DataAnalisysMipt\\Data\\automobiles\\train\\00002.jpg",
+    sess,
+    vgg)
+save_answer_array("DataAnalisysMipt\\Results\\pa_5_2_1_2.txt", probabilities_fc2[0:20])

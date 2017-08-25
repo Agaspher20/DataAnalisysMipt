@@ -12,7 +12,7 @@ def save_answer_num(fname, number):
 def save_answer_array(fname, array):
     """Функция сохранения в файл ответа, представленного массивом"""
     with open(fname, "w") as fout:
-        fout.write(" ".join([str(el) for el in array]))
+        fout.write("\n".join([str(el) for el in array]))
 
 def load_txt(fname):
     """Загрузка словаря из текстового файла."""
@@ -31,6 +31,4 @@ def process_image(fname, sess, vgg):
     img1 = imresize(img1, (224, 224))
 
     prob = sess.run(vgg.probs, feed_dict={vgg.imgs: [img1]})[0]
-    predictions = (np.argsort(prob)[::-1])[0:5]
-    for prediction in predictions:
-        print(class_names[prediction], prob[prediction])
+    return (prob, np.argsort(prob)[::-1])
