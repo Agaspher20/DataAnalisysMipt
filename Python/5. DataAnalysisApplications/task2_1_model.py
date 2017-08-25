@@ -17,11 +17,10 @@ class vgg16:
 
         # zero-mean input
         with tf.name_scope("preprocess") as scope:
-            mean = tf.constant(
-                [123.68, 116.779, 103.939],
-                dtype=tf.float32,
-                shape=[1, 1, 1, 3],
-                name="img_mean")
+            mean = tf.constant([123.68, 116.779, 103.939],
+                               dtype=tf.float32,
+                               shape=[1, 1, 1, 3],
+                               name="img_mean")
             images = self.imgs-mean
 
         # conv1_1
@@ -210,7 +209,7 @@ class vgg16:
                                                    dtype=tf.float32,
                                                    stddev=1e-1), name="weights")
             fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32),
-                               rainable=True,
+                               trainable=True,
                                name="biases")
             pool5_flat = tf.reshape(self.pool5, [-1, shape])
             fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
