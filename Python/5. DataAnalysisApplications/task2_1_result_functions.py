@@ -27,7 +27,7 @@ def load_txt(fname):
 def process_image(fname, sess, vgg):
     """Функция обработки отдельного изображения"""
     # Печатает метки TOP-5 классов и уверенность модели в каждом из них.
-    img1 = imread(fname, mode='RGB')
+    img1 = imread(fname, mode="RGB")
     img1 = imresize(img1, (224, 224))
 
     prob = sess.run(vgg.probs, feed_dict={vgg.imgs: [img1]})[0]

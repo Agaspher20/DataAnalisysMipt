@@ -69,7 +69,7 @@ rf.save_answer_num("DataAnalisysMipt\\Results\\pa_5_2_1_1.txt",
 def process_image_fc2(fname, sess, vgg):
     """Функция обработки отдельного изображения"""
     # Печатает метки TOP-5 классов и уверенность модели в каждом из них.
-    img1 = imread(fname, mode='RGB')
+    img1 = imread(fname, mode="RGB")
     img1 = imresize(img1, (224, 224))
 
     prob = sess.run(vgg.fc2, feed_dict={vgg.imgs: [img1]})[0]
@@ -80,3 +80,46 @@ probabilities_fc2, predictions_fc2 = process_image_fc2(
     sess,
     vgg)
 save_answer_array("DataAnalisysMipt\\Results\\pa_5_2_1_2.txt", probabilities_fc2[0:20])
+
+# Задание 3.
+# Теперь необходимо дообучить классификатор на нашей базе.
+# В качестве бейзлайна предлагается воспользоваться классификатором svm из пакета scipy.
+#   Модифицировать функцию get_features и добавить возможность вычислять fc2. (Аналогично второму заданию).
+#   Применить get_feautures, чтобы получить X_test и Y_test.
+#   Воспользоваться классификатором SVC с random_state=0.
+#%%
+def get_features(folder, ydict):
+    """Функция, возвращающая признаковое описание для каждого файла jpg в заданной папке"""
+    paths = glob.glob(folder)
+    X = np.zeros((len(paths), 4096))
+    Y = np.zeros(len(paths))
+
+    for i, img_name in enumerate(paths):
+        print(img_name)
+        base = os.path.basename(img_name)
+        Y[i] = ydict[base]
+
+        img1 = imread(img_name, mode="RGB")
+        img1 = imresize(img1, (224, 224))
+        # Здесь ваш код. Нужно получить слой fc2
+        fc2 = sess.run(vgg.fc2, feed_dict={vgg.imgs: [img1]})[0]
+        X[i, :] = fc2
+    return X, Y
+#%%
+def process_folder(folder):
+    """ Функция обработки папки. """
+    # Ожидается, что в этой папке лежит файл results.txt с метками классов,
+    # и имеются подразделы train и test с jpg файлами.
+    ydict = rf.load_txt(os.path.join(folder, "results.txt"))
+    X, Y = get_features(os.path.join(folder, "train/*jpg"), ydict)
+    # Ваш код здесь.
+    X_test, Y_test = get_features(os.path.join(folder, "test/*jpg"), ydict)
+    # Ваш код здесь.
+    clf = SVC(random_state=0).fit(X, Y)
+    Y_test_pred = clf.predict(X_test)
+    return (Y_test, Y_test_pred)
+#%%
+Y_test, Y_test_pred = process_folder("DataAnalisysMipt\\Data\\automobiles")
+print(sum(Y_test == Y_test_pred)) # Число правильно предсказанных классов
+rf.save_answer_num("DataAnalisysMipt\\Results\\pa_5_2_1_3.txt",
+                   sum(Y_test == Y_test_pred))
