@@ -70,17 +70,17 @@ def build_data_frequencies(data):
     """ counts product frequencies in views and buys """
     view_freqs = {}
     buy_freqs = {}
-    for views_col,buys_col in data.as_matrix():
-        views,buys = parse_session(views_col, buys_col)
+    for views_col, buys_col in data.as_matrix():
+        views, buys = parse_session(views_col, buys_col)
         for view_key in views:
             update_frequencies_count(view_key, view_freqs)
         for buy_key in buys:
             update_frequencies_count(buy_key, buy_freqs)
-    return view_freqs,buy_freqs
+    return view_freqs, buy_freqs
 
 #%%
 view_frequencies, buy_frequencies = build_data_frequencies(data_train)
-    
+
 # 2. Реализуйте два алгоритма рекомендаций:
 #    сортировка просмотренных id по популярности (частота появления в просмотренных),
 #    сортировка просмотренных id по покупаемости (частота появления в покупках).
