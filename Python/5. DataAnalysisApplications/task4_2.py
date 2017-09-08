@@ -107,14 +107,14 @@ def sort_by_frequencies(data, frequencies):
 # Если частота одинаковая, то сортировать нужно по возрастанию момента просмотра (чем раньше
 # появился в просмотренных, тем больше приоритет)
 #%%
-def precision(buys, recomendations):
-    """ calculates precision of recomendations """
-    recomended_buys = [1 if buy in recomendations else 0 for buy in buys]
-    return float(sum(recomended_buys))/float(len(recomendations))
+def precision(buys, recommendations):
+    """ calculates precision of recommendations """
+    recomended_buys = [1 if buy in recommendations else 0 for buy in buys]
+    return float(sum(recomended_buys))/float(len(recommendations))
 
-def recall(buys, recomendations):
-    """ calculates recall of recomendations """
-    recomended_buys = [1 if buy in recomendations else 0 for buy in buys]
+def recall(buys, recommendations):
+    """ calculates recall of recommendations """
+    recomended_buys = [1 if buy in recommendations else 0 for buy in buys]
     return float(sum(recomended_buys))/float(len(buys)) if len(recomended_buys) > 0 else 0.
 
 def unique_values(data, key):
@@ -128,48 +128,41 @@ def unique_values(data, key):
             values[k] = True
     return result
 
-def build_recomendations(views, frequencies, k):
+def build_recommendations(views, frequencies, k):
     """ sort session data based on appearence in frequency dictionary """
     views_popularity = [(view, popularity(view, frequencies)) for view in views]
     sorted_views = merge_sort(views_popularity, lambda v: v[1])
     return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
 
-def average_metric(metric, data, frequencies, k):
-    """ calculates average metric of recomendations """
-    metric_sum = 0.
+def estimate_model(data, model):
+    """ estimates recommendations provided by model based on precision and recall """
+    precision_sum = 0.
+    recall_sum = 0.
     for views_col, buys_col in data.as_matrix():
         views, buys = parse_session(views_col, buys_col)
-        recs = build_recomendations(views, frequencies, k)
-        metric_sum += metric(buys, recs)
-    return metric_sum/float(len(data))
+        recommendations = model(views)
+        precision_sum += precision(buys, recommendations)
+        recall_sum += recall(buys, recommendations)
+    data_length = float(len(data))
+    return (precision_sum/data_length, recall_sum/data_length)
 #%%
 data_train_clear = data_train.dropna(axis=0, how="any")
-print("View frequency precision@1\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(precision, data_train_clear, view_frequencies, 1),
-       average_metric(precision, data_test, view_frequencies, 1)))
-print("View frequency recall@1\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(recall, data_train_clear, view_frequencies, 1),
-       average_metric(recall, data_test, view_frequencies, 1)))
-print("View frequency precision@5\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(precision, data_train_clear, view_frequencies, 5),
-       average_metric(precision, data_test, view_frequencies, 5)))
-print("View frequency recall@5\n\ttrain: %f\ttest: %f\n\n" %
-      (average_metric(recall, data_train_clear, view_frequencies, 5),
-       average_metric(recall, data_test, view_frequencies, 5)))
-#%%     
-print("Buy frequency precision@1\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(precision, data_train_clear, buy_frequencies, 1),
-       average_metric(precision, data_test, buy_frequencies, 1)))
-print("Buy frequency recall@1\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(recall, data_train_clear, buy_frequencies, 1),
-       average_metric(recall, data_test, buy_frequencies, 1)))
-print("Buy frequency precision@5\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(precision, data_train_clear, buy_frequencies, 5),
-       average_metric(precision, data_test, buy_frequencies, 5)))
-print("Buy frequency recall@5\n\ttrain: %f\ttest: %f\n" %
-      (average_metric(recall, data_train_clear, buy_frequencies, 5),
-       average_metric(recall, data_test, buy_frequencies, 5)))
-
+models = [
+    ("View frequency model@1", lambda views: build_recommendations(views, view_frequencies, 1)),
+    ("View frequency model@5", lambda views: build_recommendations(views, view_frequencies, 5)),
+    ("Buy frequency model@1", lambda views: build_recommendations(views, buy_frequencies, 1)),
+    ("Buy frequency model@5", lambda views: build_recommendations(views, buy_frequencies, 5))
+]
+datas = [
+    ("train", data_train_clear),
+    ("test", data_test)
+]
+for model_name, model in models:
+    print(model_name)
+    for data_name, data in datas:
+        average_precision, average_recall = estimate_model(data, model)
+        print("\t%s: precision=%f\trecall=%f" % (data_name, average_precision, average_recall))
+    print()
 # Дополнительные вопросы
 # 1. Обратите внимание, что при сортировке по покупаемости возникает много товаров с одинаковым
 #    рангом - это означает, что значение метрик будет зависеть от того, как мы будем сортировать
