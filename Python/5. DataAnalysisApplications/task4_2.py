@@ -27,8 +27,8 @@
 #%%
 import sys
 import pandas as pd
-import numpy as np
 sys.path.append("DataAnalisysMipt\\Python\\5. DataAnalysisApplications")
+from task4_2_merge import merge_sort
 #%%
 data_train = pd.read_csv(
     "DataAnalisysMipt\\Data\\coursera_sessions_train.txt",
@@ -41,7 +41,7 @@ data_test = pd.read_csv(
     "DataAnalisysMipt\\Data\\coursera_sessions_test.txt",
     ";",
     header=0,
-    names=["viewed", "bought"])
+    names=["viewed", "bought"]).dropna(axis=0, how="any")
 data_test.head()
 
 # Важно:
@@ -63,21 +63,19 @@ def parse_session(views, buys):
     """ parses session string """
     return (parse_session_column(views),
             parse_session_column(buys) if isinstance(buys, str) else [])
-def update_frequencies_count(key, frequencies):
+def update_frequencies_count(keys, frequencies):
     """ increments dictionary value if key is present in dictionary or puts this key """
-    frequencies[key] = frequencies[key] + 1 if key in frequencies else 1
+    for key in keys:
+        frequencies[key] = frequencies[key] + 1 if key in frequencies else 1
 def build_data_frequencies(data):
     """ counts product frequencies in views and buys """
     view_freqs = {}
     buy_freqs = {}
     for views_col, buys_col in data.as_matrix():
         views, buys = parse_session(views_col, buys_col)
-        for view_key in views:
-            update_frequencies_count(view_key, view_freqs)
-        for buy_key in buys:
-            update_frequencies_count(buy_key, buy_freqs)
+        update_frequencies_count(views, view_freqs)
+        update_frequencies_count(buys, buy_freqs)
     return view_freqs, buy_freqs
-
 #%%
 view_frequencies, buy_frequencies = build_data_frequencies(data_train)
 
@@ -85,16 +83,21 @@ view_frequencies, buy_frequencies = build_data_frequencies(data_train)
 #    сортировка просмотренных id по популярности (частота появления в просмотренных),
 #    сортировка просмотренных id по покупаемости (частота появления в покупках).
 #%%
-view_buy_frequencies = {}
-for k, v in view_frequencies.items():
-    view_buy_frequencies[k] = buy_frequencies[k] if k in buy_frequencies else 0
+def popularity(view, frequencies):
+    """ Calculates item popularity based on frequency value. """
+    return float(frequencies[view] if view in frequencies else 0)
 
-sorted_view_freqs = [(k, v)
-                     for k, v
-                     in sorted(view_frequencies.items(), key=lambda kvp: kvp[1], reverse=True)]
-sorted_buy_freqs = [(k, v)
-                    for k, v
-                    in sorted(view_buy_frequencies.items(), key=lambda kvp: kvp[1], reverse=True)]
+def sort_by_frequencies(data, frequencies):
+    """ Sorts items in data by frequencies """
+    popularities = {}
+    for views_col, buys_col in data.as_matrix():
+        views = parse_session(views_col, buys_col)[0]
+        for view in views:
+            if view not in popularities:
+                popularities[view] = popularity(view, frequencies)
+    return [(k, v)
+            for k, v
+            in sorted(popularities.items(), key=lambda kvp: kvp[1], reverse=True)]
 # 3. Для данных алгоритмов выпишите через пробел AverageRecall@1, AveragePrecision@1,
 #    AverageRecall@5, AveragePrecision@5 на обучающей и тестовых выборках, округляя до 2 знака
 #    после запятой. Это будут ваши ответы в этом задании. Посмотрите, как они соотносятся друг с
@@ -103,6 +106,69 @@ sorted_buy_freqs = [(k, v)
 #    на обучающей и тестовой выборке в случае рекомендаций по частотам покупки.
 # Если частота одинаковая, то сортировать нужно по возрастанию момента просмотра (чем раньше
 # появился в просмотренных, тем больше приоритет)
+#%%
+def precision(buys, recomendations):
+    """ calculates precision of recomendations """
+    recomended_buys = [1 if buy in recomendations else 0 for buy in buys]
+    return float(sum(recomended_buys))/float(len(recomendations))
+
+def recall(buys, recomendations):
+    """ calculates recall of recomendations """
+    recomended_buys = [1 if buy in recomendations else 0 for buy in buys]
+    return float(sum(recomended_buys))/float(len(buys)) if len(recomended_buys) > 0 else 0.
+
+def unique_values(data, key):
+    """ returns unique items from data based on key value """
+    values = {}
+    result = []
+    for value in data:
+        k = key(value)
+        if k not in values:
+            result.append(value)
+            values[k] = True
+    return result
+
+def build_recomendations(views, frequencies, k):
+    """ sort session data based on appearence in frequency dictionary """
+    views_popularity = [(view, popularity(view, frequencies)) for view in views]
+    sorted_views = merge_sort(views_popularity, lambda v: v[1])
+    return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
+
+def average_metric(metric, data, frequencies, k):
+    """ calculates average metric of recomendations """
+    metric_sum = 0.
+    for views_col, buys_col in data.as_matrix():
+        views, buys = parse_session(views_col, buys_col)
+        recs = build_recomendations(views, frequencies, k)
+        metric_sum += metric(buys, recs)
+    return metric_sum/float(len(data))
+#%%
+data_train_clear = data_train.dropna(axis=0, how="any")
+print("View frequency precision@1\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(precision, data_train_clear, view_frequencies, 1),
+       average_metric(precision, data_test, view_frequencies, 1)))
+print("View frequency recall@1\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(recall, data_train_clear, view_frequencies, 1),
+       average_metric(recall, data_test, view_frequencies, 1)))
+print("View frequency precision@5\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(precision, data_train_clear, view_frequencies, 5),
+       average_metric(precision, data_test, view_frequencies, 5)))
+print("View frequency recall@5\n\ttrain: %f\ttest: %f\n\n" %
+      (average_metric(recall, data_train_clear, view_frequencies, 5),
+       average_metric(recall, data_test, view_frequencies, 5)))
+#%%     
+print("Buy frequency precision@1\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(precision, data_train_clear, buy_frequencies, 1),
+       average_metric(precision, data_test, buy_frequencies, 1)))
+print("Buy frequency recall@1\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(recall, data_train_clear, buy_frequencies, 1),
+       average_metric(recall, data_test, buy_frequencies, 1)))
+print("Buy frequency precision@5\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(precision, data_train_clear, buy_frequencies, 5),
+       average_metric(precision, data_test, buy_frequencies, 5)))
+print("Buy frequency recall@5\n\ttrain: %f\ttest: %f\n" %
+      (average_metric(recall, data_train_clear, buy_frequencies, 5),
+       average_metric(recall, data_test, buy_frequencies, 5)))
 
 # Дополнительные вопросы
 # 1. Обратите внимание, что при сортировке по покупаемости возникает много товаров с одинаковым
