@@ -88,17 +88,23 @@ def popularity(view, frequencies):
     """ Calculates item popularity based on frequency value. """
     return float(frequencies[view] if view in frequencies else 0)
 
-def sort_by_frequencies(data, frequencies):
-    """ Sorts items in data by frequencies """
-    popularities = {}
-    for views_col, buys_col in data.as_matrix():
-        views = parse_session(views_col, buys_col)[0]
-        for view in views:
-            if view not in popularities:
-                popularities[view] = popularity(view, frequencies)
-    return [(k, v)
-            for k, v
-            in sorted(popularities.items(), key=lambda kvp: kvp[1], reverse=True)]
+def unique_values(data, key):
+    """ returns unique items from data based on key value """
+    values = {}
+    result = []
+    for value in data:
+        k = key(value)
+        if k not in values:
+            result.append(value)
+            values[k] = True
+    return result
+
+def build_recommendations(views, frequencies, k):
+    """ sort session data based on appearence in frequency dictionary """
+    views_popularity = [(view, popularity(view, frequencies)) for view in views]
+    sorted_views = merge_sort(views_popularity, lambda v: v[1])
+    views_count = len(set(views))
+    return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
 # 3. Для данных алгоритмов выпишите через пробел AverageRecall@1, AveragePrecision@1,
 #    AverageRecall@5, AveragePrecision@5 на обучающей и тестовых выборках, округляя до 2 знака
 #    после запятой. Это будут ваши ответы в этом задании. Посмотрите, как они соотносятся друг с
@@ -117,23 +123,6 @@ def recall(buys, recommendations):
     """ calculates recall of recommendations """
     recomended_buys = [1 if buy in recommendations else 0 for buy in buys]
     return float(sum(recomended_buys))/float(len(buys)) if len(recomended_buys) > 0 else 0.
-
-def unique_values(data, key):
-    """ returns unique items from data based on key value """
-    values = {}
-    result = []
-    for value in data:
-        k = key(value)
-        if k not in values:
-            result.append(value)
-            values[k] = True
-    return result
-
-def build_recommendations(views, frequencies, k):
-    """ sort session data based on appearence in frequency dictionary """
-    views_popularity = [(view, popularity(view, frequencies)) for view in views]
-    sorted_views = merge_sort(views_popularity, lambda v: v[1])
-    return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
 
 def estimate_model(data, model, k):
     """ estimates recommendations provided by model based on precision and recall """
