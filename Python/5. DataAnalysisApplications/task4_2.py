@@ -27,6 +27,7 @@
 #%%
 import sys
 import pandas as pd
+import numpy as np
 sys.path.append("DataAnalisysMipt\\Python\\5. DataAnalysisApplications")
 from task4_2_merge import merge_sort
 #%%
@@ -134,34 +135,44 @@ def build_recommendations(views, frequencies, k):
     sorted_views = merge_sort(views_popularity, lambda v: v[1])
     return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
 
-def estimate_model(data, model):
+def estimate_model(data, model, k):
     """ estimates recommendations provided by model based on precision and recall """
     precision_sum = 0.
     recall_sum = 0.
     for views_col, buys_col in data.as_matrix():
         views, buys = parse_session(views_col, buys_col)
-        recommendations = model(views)
+        recommendations = model(views, k)
         precision_sum += precision(buys, recommendations)
         recall_sum += recall(buys, recommendations)
     data_length = float(len(data))
-    return (precision_sum/data_length, recall_sum/data_length)
+    return (recall_sum/data_length, precision_sum/data_length)
+
+def save_answer_array(fname, array):
+    """ Saves array of answers """
+    with open(fname, "w") as fout:
+        fout.write(" ".join([str(el) for el in array]))
 #%%
 data_train_clear = data_train.dropna(axis=0, how="any")
 models = [
-    ("View frequency model@1", lambda views: build_recommendations(views, view_frequencies, 1)),
-    ("View frequency model@5", lambda views: build_recommendations(views, view_frequencies, 5)),
-    ("Buy frequency model@1", lambda views: build_recommendations(views, buy_frequencies, 1)),
-    ("Buy frequency model@5", lambda views: build_recommendations(views, buy_frequencies, 5))
+    ("View frequency model", lambda views, k: build_recommendations(views, view_frequencies, k)),
+    ("Purchases frequency model", lambda views, k: build_recommendations(views, buy_frequencies, k))
 ]
 datas = [
-    ("train", data_train_clear),
-    ("test", data_test)
+    ("Train", data_train_clear),
+    ("Test", data_test)
 ]
-for model_name, model in models:
-    print(model_name)
-    for data_name, data in datas:
-        average_precision, average_recall = estimate_model(data, model)
-        print("\t%s: precision=%f\trecall=%f" % (data_name, average_precision, average_recall))
+ks = [1,5]
+for data_name, data in datas:
+    print(data_name)
+    for model_name, model in models:
+        results = []
+        for k in ks:
+            average_recall, average_precision = estimate_model(data, model, k)
+            results.append(np.round(average_recall, 2))
+            results.append(np.round(average_precision, 2))
+            print("%s@%i: recall=%.2f\tprecision=%.2f" % (model_name, k, average_recall, average_precision))
+        fileName = (data_name + "_" + model_name + ".txt")
+        save_answer_array("DataAnalisysMipt\\Results\\" + fileName, results)
     print()
 # Дополнительные вопросы
 # 1. Обратите внимание, что при сортировке по покупаемости возникает много товаров с одинаковым
