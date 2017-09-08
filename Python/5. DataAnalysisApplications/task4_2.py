@@ -64,30 +64,19 @@ def parse_session(views, buys):
     """ parses session string """
     return (parse_session_column(views),
             parse_session_column(buys) if isinstance(buys, str) else [])
-def update_frequencies_count(keys, frequencies, f_list):
+def update_frequencies_count(keys, frequencies):
     """ increments dictionary value if key is present in dictionary or puts this key """
     for key in keys:
-        if key in frequencies:
-            frequencies_obj = frequencies[key]
-            frequencies_obj[1] = frequencies_obj[1] + 1
-        else:
-            frequencies_obj = [key, 1]
-            f_list.append(frequencies_obj)
-            frequencies[key] = frequencies_obj
-def build_matrix_frequencies(matrix):
+        frequencies[key] = frequencies[key] + 1 if key in frequencies else 1
+def build_data_frequencies(data):
     """ counts product frequencies in views and buys """
     view_freqs = {}
     buy_freqs = {}
-    view_list = []
-    buy_list = []
-    for views_col, buys_col in matrix:
+    for views_col, buys_col in data.as_matrix():
         views, buys = parse_session(views_col, buys_col)
-        update_frequencies_count(views, view_freqs, view_list)
-        update_frequencies_count(buys, buy_freqs, buy_list)
-    return view_list, buy_list
-def build_data_frequencies(data):
-    """ counts product frequencies in views and buys """
-    return build_matrix_frequencies(data.as_matrix())
+        update_frequencies_count(views, view_freqs)
+        update_frequencies_count(buys, buy_freqs)
+    return view_freqs, buy_freqs
 #%%
 view_frequencies, buy_frequencies = build_data_frequencies(data_train)
 
@@ -152,22 +141,11 @@ def save_answer_array(fname, array):
     with open(fname, "w") as fout:
         fout.write(" ".join([str(el) for el in array]))
 #%%
-sorted_view_frequencies = merge_sort(view_frequencies, lambda v: v[1], descending=True)
-sorted_buy_frequencies = merge_sort(buy_frequencies, lambda v: v[1], descending=True)
-def dumb_frequencies_model(views, k, frequencies):
-    views_count = len(set(views))
-    recommendations_count = views_count if views_count < k else k
-    return [key for key,pop in frequencies[:recommendations_count]]
-models = [
-    ("View frequency model", lambda views, k: dumb_frequencies_model(views, k, sorted_view_frequencies)),
-    ("Purchases frequency model", lambda views, k: dumb_frequencies_model(views, k, sorted_buy_frequencies))
-]
-#%%
 data_train_clear = data_train.dropna(axis=0, how="any")
-# models = [
-#     ("View frequency model", lambda views, k: build_recommendations(views, view_frequencies, k)),
-#     ("Purchases frequency model", lambda views, k: build_recommendations(views, buy_frequencies, k))
-# ]
+models = [
+    ("View frequency model", lambda views, k: build_recommendations(views, view_frequencies, k)),
+    ("Purchases frequency model", lambda views, k: build_recommendations(views, buy_frequencies, k))
+]
 datas = [
     ("Train", data_train_clear),
     ("Test", data_test)
