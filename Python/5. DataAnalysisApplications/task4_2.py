@@ -64,19 +64,30 @@ def parse_session(views, buys):
     """ parses session string """
     return (parse_session_column(views),
             parse_session_column(buys) if isinstance(buys, str) else [])
-def update_frequencies_count(keys, frequencies):
+def update_frequencies_count(keys, frequencies, f_list):
     """ increments dictionary value if key is present in dictionary or puts this key """
     for key in keys:
-        frequencies[key] = frequencies[key] + 1 if key in frequencies else 1
-def build_data_frequencies(data):
+        if key in frequencies:
+            frequencies_obj = frequencies[key]
+            frequencies_obj[1] = frequencies_obj[1] + 1
+        else:
+            frequencies_obj = [key, 1]
+            f_list.append(frequencies_obj)
+            frequencies[key] = frequencies_obj
+def build_matrix_frequencies(matrix):
     """ counts product frequencies in views and buys """
     view_freqs = {}
     buy_freqs = {}
-    for views_col, buys_col in data.as_matrix():
+    view_list = []
+    buy_list = []
+    for views_col, buys_col in matrix:
         views, buys = parse_session(views_col, buys_col)
-        update_frequencies_count(views, view_freqs)
-        update_frequencies_count(buys, buy_freqs)
-    return view_freqs, buy_freqs
+        update_frequencies_count(views, view_freqs, view_list)
+        update_frequencies_count(buys, buy_freqs, buy_list)
+    return view_list, buy_list
+def build_data_frequencies(data):
+    """ counts product frequencies in views and buys """
+    return build_matrix_frequencies(data.as_matrix())
 #%%
 view_frequencies, buy_frequencies = build_data_frequencies(data_train)
 
@@ -102,7 +113,7 @@ def unique_values(data, key):
 def build_recommendations(views, frequencies, k):
     """ sort session data based on appearence in frequency dictionary """
     views_popularity = [(view, popularity(view, frequencies)) for view in views]
-    sorted_views = merge_sort(views_popularity, lambda v: v[1])
+    sorted_views = merge_sort(views_popularity, lambda v: v[1], descending=True)
     views_count = len(set(views))
     return [view for (view, pop) in unique_values(sorted_views, lambda v: v[0])][:k]
 # 3. Для данных алгоритмов выпишите через пробел AverageRecall@1, AveragePrecision@1,
@@ -114,14 +125,14 @@ def build_recommendations(views, frequencies, k):
 # Если частота одинаковая, то сортировать нужно по возрастанию момента просмотра (чем раньше
 # появился в просмотренных, тем больше приоритет)
 #%%
-def precision(buys, recommendations):
+def precision(buys, recommendations, k):
     """ calculates precision of recommendations """
-    recomended_buys = [1 if buy in recommendations else 0 for buy in buys]
-    return float(sum(recomended_buys))/float(len(recommendations))
+    recomended_buys = [1 if recommendation in buys else 0 for recommendation in recommendations]
+    return float(sum(recomended_buys))/float(k)
 
 def recall(buys, recommendations):
     """ calculates recall of recommendations """
-    recomended_buys = [1 if buy in recommendations else 0 for buy in buys]
+    recomended_buys = [1 if recommendation in buys else 0 for recommendation in recommendations]
     return float(sum(recomended_buys))/float(len(buys)) if len(recomended_buys) > 0 else 0.
 
 def estimate_model(data, model, k):
@@ -131,7 +142,7 @@ def estimate_model(data, model, k):
     for views_col, buys_col in data.as_matrix():
         views, buys = parse_session(views_col, buys_col)
         recommendations = model(views, k)
-        precision_sum += precision(buys, recommendations)
+        precision_sum += precision(buys, recommendations, k)
         recall_sum += recall(buys, recommendations)
     data_length = float(len(data))
     return (recall_sum/data_length, precision_sum/data_length)
@@ -141,11 +152,22 @@ def save_answer_array(fname, array):
     with open(fname, "w") as fout:
         fout.write(" ".join([str(el) for el in array]))
 #%%
-data_train_clear = data_train.dropna(axis=0, how="any")
+sorted_view_frequencies = merge_sort(view_frequencies, lambda v: v[1], descending=True)
+sorted_buy_frequencies = merge_sort(buy_frequencies, lambda v: v[1], descending=True)
+def dumb_frequencies_model(views, k, frequencies):
+    views_count = len(set(views))
+    recommendations_count = views_count if views_count < k else k
+    return [key for key,pop in frequencies[:recommendations_count]]
 models = [
-    ("View frequency model", lambda views, k: build_recommendations(views, view_frequencies, k)),
-    ("Purchases frequency model", lambda views, k: build_recommendations(views, buy_frequencies, k))
+    ("View frequency model", lambda views, k: dumb_frequencies_model(views, k, sorted_view_frequencies)),
+    ("Purchases frequency model", lambda views, k: dumb_frequencies_model(views, k, sorted_buy_frequencies))
 ]
+#%%
+data_train_clear = data_train.dropna(axis=0, how="any")
+# models = [
+#     ("View frequency model", lambda views, k: build_recommendations(views, view_frequencies, k)),
+#     ("Purchases frequency model", lambda views, k: build_recommendations(views, buy_frequencies, k))
+# ]
 datas = [
     ("Train", data_train_clear),
     ("Test", data_test)
@@ -163,6 +185,7 @@ for data_name, data in datas:
         fileName = (data_name + "_" + model_name + ".txt")
         save_answer_array("DataAnalisysMipt\\Results\\" + fileName, results)
     print()
+
 # Дополнительные вопросы
 # 1. Обратите внимание, что при сортировке по покупаемости возникает много товаров с одинаковым
 #    рангом - это означает, что значение метрик будет зависеть от того, как мы будем сортировать
